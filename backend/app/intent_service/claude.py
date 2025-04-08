@@ -109,9 +109,10 @@ class ClaudeIntentService:
         5. get_subscribers(limit: int = 10, sort_by: str = "created_at", sort_order: str = "desc") - Get subscribers
         6. count_subscribers() - Count the number of subscribers
         7. get_subscriber_details(email: str) - Get details for a specific subscriber
-        8. get_forms() - Get all forms from Kit.com
-        9. create_form(name: str, redirect_url: Optional[str] = None) - Create a new form
-        10. explain_concept(concept: str) - Explain a Kit.com concept
+        8. create_subscriber(email: str, first_name: Optional[str] = None) - Create a new subscriber
+        9. get_forms() - Get all forms from Kit.com
+        10. create_form(name: str, redirect_url: Optional[str] = None) - Create a new form
+        11. explain_concept(concept: str) - Explain a Kit.com concept
         """
 
         prompt = f"""

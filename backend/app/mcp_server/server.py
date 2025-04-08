@@ -88,6 +88,7 @@ class KitMCPServer:
             "get_subscribers": self.kit_client.get_subscribers,
             "count_subscribers": self._count_subscribers,
             "get_subscriber_details": self.kit_client.get_subscriber_by_email,
+            "create_subscriber": self._create_subscriber,
             "get_forms": self.kit_client.get_forms,
             "create_form": self.kit_client.create_form,
             "explain_concept": self._explain_concept
@@ -156,6 +157,26 @@ class KitMCPServer:
             return count
         except Exception as e:
             logger.error(f"Error counting subscribers: {str(e)}")
+            raise
+
+    async def _create_subscriber(self, email: str, first_name: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Create a new subscriber.
+
+        Args:
+            email: Email address of the subscriber
+            first_name: First name of the subscriber
+
+        Returns:
+            Created subscriber object
+        """
+        try:
+            logger.info(f"Creating subscriber with email: {email}, first_name: {first_name}")
+            result = await self.kit_client.create_subscriber(email, first_name)
+            logger.info(f"Subscriber creation result: {result}")
+            return result
+        except Exception as e:
+            logger.error(f"Error creating subscriber: {str(e)}")
             raise
 
     async def _explain_concept(self, concept: str) -> str:

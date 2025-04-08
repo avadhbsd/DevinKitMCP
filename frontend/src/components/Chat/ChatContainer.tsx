@@ -60,14 +60,30 @@ const ChatContainer: React.FC = () => {
           }]);
         }
       } else if ((kitApiStatus.status === 'error' || claudeApiStatus.status === 'error') && messages.length === 0) {
+        let errorMessage = "There was an error connecting to the APIs. Please check your API keys in settings.";
+        
+        if (kitApiStatus.status === 'error' && claudeApiStatus.status === 'error') {
+          errorMessage = "Failed to connect to both Kit.com and Claude APIs. Please check your API keys in settings.";
+        } else if (kitApiStatus.status === 'error') {
+          errorMessage = `Failed to connect to Kit.com API: ${kitApiStatus.error || 'Unknown error'}`;
+        } else if (claudeApiStatus.status === 'error') {
+          errorMessage = `Failed to connect to Claude API: ${claudeApiStatus.error || 'Unknown error'}`;
+        }
+        
         setMessages([{
-          content: "There was an error connecting to the APIs. Please check your API keys in settings.",
+          content: errorMessage,
+          role: 'assistant',
+          timestamp: new Date().toISOString()
+        }]);
+      } else if ((kitApiStatus.status === 'connecting' || claudeApiStatus.status === 'connecting') && messages.length === 0) {
+        setMessages([{
+          content: "Connecting to APIs, please wait...",
           role: 'assistant',
           timestamp: new Date().toISOString()
         }]);
       }
     }
-  }, [apiSettings, kitApiStatus.status, claudeApiStatus.status, messages.length]);
+  }, [apiSettings, kitApiStatus.status, kitApiStatus.error, claudeApiStatus.status, claudeApiStatus.error, messages.length]);
 
   useEffect(() => {
     const connectWebSocket = () => {
@@ -206,7 +222,8 @@ const ChatContainer: React.FC = () => {
             }`}></div>
             <span className="text-sm">Claude API: {
               claudeApiStatus.status === 'connected' ? 'Connected' : 
-              claudeApiStatus.status === 'connecting' ? 'Connecting...' : 'Disconnected'
+              claudeApiStatus.status === 'connecting' ? 'Connecting...' : 
+              claudeApiStatus.status === 'error' ? 'Error' : 'Disconnected'
             }</span>
           </div>
           <div className="flex items-center space-x-2">
@@ -216,7 +233,8 @@ const ChatContainer: React.FC = () => {
             }`}></div>
             <span className="text-sm">Kit.com API: {
               kitApiStatus.status === 'connected' ? 'Connected' : 
-              kitApiStatus.status === 'connecting' ? 'Connecting...' : 'Disconnected'
+              kitApiStatus.status === 'connecting' ? 'Connecting...' : 
+              kitApiStatus.status === 'error' ? 'Error' : 'Disconnected'
             }</span>
           </div>
           <button

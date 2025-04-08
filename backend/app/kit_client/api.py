@@ -227,6 +227,38 @@ class KitClient:
             return subscribers[0]
         else:
             return {}
+            
+    async def create_subscriber(self, email: str, first_name: Optional[str] = None, 
+                               fields: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Create a new subscriber.
+
+        Args:
+            email: Email address of the subscriber
+            first_name: First name of the subscriber
+            fields: Additional fields for the subscriber
+
+        Returns:
+            Created subscriber object
+        """
+        data = {"email": email}
+        
+        if first_name:
+            data["first_name"] = first_name
+            
+        if fields:
+            for field_key, field_value in fields.items():
+                data[field_key] = field_value
+            
+        logger.info(f"Creating subscriber with data: {data}")
+        
+        try:
+            response = await self._make_request("POST", "/subscribers", data=data)
+            logger.info(f"Subscriber creation response: {response}")
+            return response.get("subscriber", {})
+        except Exception as e:
+            logger.error(f"Error creating subscriber: {str(e)}")
+            raise
 
 
     async def get_forms(self) -> List[Dict[str, Any]]:
