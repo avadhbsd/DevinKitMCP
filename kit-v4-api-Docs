@@ -1,0 +1,6842 @@
+
+
+Overview
+
+Introduction
+
+API requests are relative to https://api.kit.com/
+Welcome to the Kit V4 API.
+
+We're thrilled that you want to help expand our ever-growing platform! Our API offers a host of functionality to help our creators automate a bunch of tasks to help make their lives as easy as possible, especially by helping link their tech marketing stack together in perfect harmony.
+
+As long as the authenticated account's plan is eligible for use with the API and integrations, you will be able to create and send broadcasts to your subscribers, manage your email list through tags and custom fields, import purchase data from your favourite e-commerce platforms and much, much more.
+
+If you are a third party developer, once your app is complete, you will be able to publish it to the thousands of creators using our platform today.
+
+For an overview of apps at Kit, please check out our help centre articles that guide you through the creation of your app, its API access and plugin setup.
+
+If you were previously using the Kit API V3 and want to update to use our new functionality, please review our changelog for breaking changes between versions.
+
+You can also view our Postman Collection here.
+
+Changes
+
+The Kit API V4 introduces many new features and improved functionality from our previous versions such as:
+
+Improved performance
+Cursor-based pagination
+Bulk requests and async processing
+New functionality for broadcasts, including access to subscriber filters and improved HTML support
+Bug fixes
+See our guide on upgrading from V3 to V4.
+
+Authentication
+
+We support two authentication mechanisms in the V4 API:
+
+OAuth 2.0 for apps available for all creators in the Kit App Store
+API Keys for automating simple tools and integrations for your account
+API Keys
+
+To use API Key authentication, first create a V4 API Key in your developer settings.
+
+curl -X GET https://api.kit.com/v4/account \
+  -H 'Accept: application/json' \
+  -H 'X-Kit-Api-Key: kit_abc123'
+Then you can pass the key in the X-Kit-Api-Key header when making requests.
+
+The following endpoints do not support API Key authentication and must be used with OAuth:
+
+Purchases endpoint
+Bulk endpoints
+OAuth
+
+Authorization URL: https://app.kit.com/oauth/authorize
+        Token URL: https://app.kit.com/oauth/token
+You can set up your OAuth API Access in your developer settings. If you don't see an option to configure apps, please reach out to us.
+
+When configuring your App for API Access, you'll need to provide an "Authorization URL". This should be a URL on your system that we will link to during app installation so you can initiate OAuth and store the returned access tokens. We will link the user to this URL with a redirect query param, e.g. ?redirect=https://app.kit.com/apps. When the authorization flow is complete, you need to redirect the user back to that provided redirect URL so they can continue their session within the Kit app.
+
+We support the Authorization Code Grant and depending on the type of app your building we support two ways of issuing access tokens:
+
+For web servers, you'll use the refresh token flow
+For Single Page Apps (SPA) or mobile apps, you'll use the Proof Key for Code Exchange (PKCE) flow
+Install Flow for an App with API Access
+
+ We've found these two resources to be helpful for learning more about how OAuth 2.0 works:
+Okta's OAuth Playground
+David Neal's An Illustrated Guide to OAuth and OpenID Connect
+We've also developed an open source Ruby Gem for authenticating with Kit via an OmniAuth Strategy.
+
+
+
+Bulk & Async Processing
+
+We support bulk processing for some common use cases, e.g. create subscribers.
+
+These endpoints exist in the bulk namespace, i.e. https://api.kit.com/v4/bulk/.
+
+In our bulk requests, we support synchronous processing for small batch sizes. The cut off size is clearly documented in each bulk request's documentation below.
+
+For large batch sizes, we use an asynchronous callback design. If you include a callback_url in your request body, we’ll POST to that URL when our processing has completed. Our POST request body will be the same response shape as our documented our synchronous 200 OK use case for each endpoint.
+
+If you try to enqueue too many bulk requests at once, you'll receive an error response with a 413 status code, which your code should gracefully handle. Try again after a short period.
+
+Responses & Error Codes
+
+Pagination
+
+curl -X GET https://api.kit.com/v4/broadcasts?per_page=100 \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+All of our list endpoints are paginated unless noted otherwise.
+
+{
+  "broadcasts": [...],
+  "pagination": {
+    "has_previous_page": false,
+    "has_next_page": true,
+    "start_cursor": "WzEzXQ==",
+    "end_cursor": "WzE0XQ==",
+    "per_page": 100
+  }
+}
+We provide cursor based pagination.
+
+All paginated endpoints will return a pagination object in the JSON response.
+
+curl -X GET https://api.kit.com/v4/broadcasts?after=WzE0XQ== \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+The default page size is 500 results. To change the page size, use the per_page query parameter. The maximum page size allowed is 1000.
+
+To request the next page of results, use the after query param with the end_cursor value of the response.
+
+curl -X GET https://api.kit.com/v4/broadcasts?before=WzE0XQ== \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+To request the previous page of results, use the before query param with the start_cursor value of the response.
+
+To request the total count of the collection, use the include_total_count query param with a value of true. This will complete another data query to return the total count. Expect a slightly slower response when using this option.
+
+Dates
+
+All dates are returned in UTC, ISO8601 format such as: "2023-07-17T16:48:20Z".
+
+Bad Data
+
+When you create or update a field, you may receive an error response with status code 422 if any fields contain bad data or required fields are missing.
+
+Rate Limiting
+
+We have different rate limits depending on the authentication strategy used:
+
+When using OAuth, no more than 600 requests over a rolling 60 second period for given access token.
+When using API Keys, no more than 120 requests over a rolling 60 second period for a given API Key.
+If your request rate exceeds our limits, you will receive an error response with status code 429, which your code should gracefully handle. We recommend spacing out your requests and performing an exponential backoff to keep within the limit.
+
+Internal Server Errors
+
+If the server is overloaded or you encounter a bug, you will receive a response with status code 500. Try again after a short period, and if you continue to encounter an error, please raise the issue with support.
+
+Explanation
+
+Double opt-in
+
+With a double opt-in, your subscribers will receive an Incentive Email asking them to click a button to confirm that they wish to be on your email list.
+
+Double opt-in protects your list and your deliverability, making sure your emails reach those who truly want to receive them. This can lead to more engaged subscribers and qualified leads. To learn more about double opt-in view our knowledge base here.
+
+Subscriber states (details on subscriber states can be found here)
+
+Inactive: unconfirmed subscriber that cannot be emailed until activated. To activate, the subscriber will need to be added to a form with double opt-in enabled and confirm their subscription.
+Active: confirmed subscriber that can be emailed and counts towards billing totals.
+Cancelled: subscriber that has unsubscribed from the account. Cancelled subscribers cannot be contacted but can be re-subscribed at a later date - these don’t count towards billing totals.
+Bounced: subscriber that has triggered a hard bounce due to a permanent issue that restricts them from receiving emails. These are unsubscribed automatically and don’t count towards billing totals.
+Complained: subscriber that has marked an email as spam. This cancels their subscriptions to any forms, landing pages, or sequences and removes them from your list.
+In order to confirm an inactive subscriber through double opt-in successfully the subscriber must start in an inactive state. An inactive subscriber transitions from inactive to active by adding the subscriber to a form with double opt-in enabled.
+
+Guides
+
+Upgrading to V4
+
+The URLs for the API endpoints are now api.kit.com/v4/... instead of api.convertkit.com/v3/.... They are otherwise unchanged unless called out specifically below.
+V4 supports OAuth for applications and API Keys for automating simple tools and integrations for your personal account. V4 API Keys are not compatible with V3
+Our pagination mechanism has changed. We no longer support page or offset based pagination. All of our pagination is now cursor based. This improves performance.
+All errors are now returned with a consistent response shape. The response is a JSON object with a single attribute errors, an array of strings.
+See below for a list of endpoints changed
+Accounts
+
+Get current account
+The response shape has changed. User and account information is now nested under user and account objects, respectively.
+Broadcasts
+
+List broadcasts
+The page parameter is no longer supported. To request next or previous pages, use the before or after cursor
+Create a broadcast
+The email_layout_template param is no longer supported. To specify the email template, use the email_template_id param.
+Query your email templates to get the correct id
+The response shape has changed. We no longer return email_layout_template and return an object for email_template.
+The error response shape has changed.
+Get a broadcast
+The response shape has changed. We no longer return email_layout_template and return an object for email_template.
+The error response shape has changed.
+Delete a broadcast
+The response shape has changed. We return a 204 empty response.
+The error response shape has changed.
+Update a broadcast
+The email_layout_template param is no longer supported. To specify the email template, use the email_template_id param.
+Query your email templates to get the correct id
+The response shape has changed. We no longer return email_layout_template and return an object for email_template.
+The error response shape has changed.
+Get stats
+The error response shape has changed.
+Subscribers
+
+List subscribers
+The page parameter is no longer supported. To request next or previous pages, use the before or after cursor
+The from parameter is no longer supported. It has been replaced with created_after.
+The to parameter is no longer supported. It has been replaced with created_before.
+The updated_from parameter is no longer supported. It has been replaced with updated_after.
+The updated_to parameter is no longer supported. It has been replaced with updated_before.
+Get a subscriber
+The error response shape has changed.
+Update a subscriber
+The error response shape has changed.
+Unsubscribe a subscriber
+The URL path has changed. /v3/unsubscribe -> /v4/subscribers/:id/unsubscribe
+We now require you to unsubscribe the subscriber via their id
+If you need to find their id by email address, you can query with List subscribers, /v4/subscribers?email_address=<email>
+The response shape has changed. It returns a 204 empty response instead of the subscriber.
+The error response shape has changed.
+List tags for a subscriber
+The response shape has changed. created_at has been replaced with tagged_at.
+The error response shape has changed.
+Custom Fields
+
+Create a custom field
+The response shape has changed. The created custom field is now returned nested under a custom_field attribute.
+This endpoint no longer allows creating multiple custom fields. Use Bulk create custom fields instead.
+The error response shape has changed.
+Update a custom field
+The response shape has changed. The updated custom field is returned nested under a custom_field attribute.
+The error response shape has changed.
+Forms
+
+List forms
+The response shape has changed.
+Add subscriber to a form by email address
+The email parameter is no longer supported. To add a subscriber by email address, use the email_address parameter.
+List subscribers to a form
+The URL path has changed. /v3/forms/:id/subscriptions -> /v4/forms/:id/subscribers
+The response shape has changed. Subscriber information is no longer nested under subscription.
+Purchases
+
+List purchases
+The page parameter is no longer supported. To request next or previous pages, use the before or after cursor
+Create a purchase
+The error response shape has changed.
+Sequences
+
+List sequences
+The response shape has changed. Sequences are nested under a sequences attributes (instead of a courses attribute).
+Add subscriber to a sequence by email address
+The email parameter is no longer supported. To add a subscriber by email address, use the email_address parameter.
+List subscribers to a sequence
+The URL path has changed. /v3/sequences/:id/subscriptions -> /v4/sequences/:id/subscribers
+The response shape has changed. Subscriber information is no longer nested under subscription.
+Tags
+
+Create a tag
+The request shape has changed. Root tag attribute no longer required
+The response shape has changed. The returned tag is nested under a tag attribute.
+The error response shape has changed.
+This endpoint no longer allows creating multiple tags. Use Bulk create tags instead.
+List subscribers for a tag
+The URL path has changed. /v3/tags/:id/subscriptions -> /v4/tags/:id/subscribers
+The page parameter is no longer supported. To request next or previous pages, use the before or after cursor
+The error response shape has changed.
+The response shape has changed. The root object is subscribers instead of subscriptions along with other smaller changes.
+Tag a subscriber
+The URL path has changed. /v3/tags/:id/subscribe -> /v4/tags/:tag_id/subscribers/:id
+The response shape has changed. The root object is subscriber instead of subscription along with other smaller changes.
+The error response shape has changed.
+None of the optional params from V3 are supported in V4
+Tag a subscriber by email address
+The URL path has changed. /v3/tags/:id/subscribe -> /v4/tags/:tag_id/subscribers
+The email parameter is no longer supported. To add a subscriber by email address, use the email_address parameter.
+The response shape has changed. The root object is subscriber instead of subscription along with other smaller changes.
+The error response shape has changed.
+None of the optional request params from V3 are supported in V4
+Remove tag from subscriber
+The URL path and HTTP verb has changed. POST /v3/tags/:id/unsubscribe -> DELETE /v4/tags/:tag_id/subscribers/:id
+The response shape has changed. We return a 204 empty response
+The error response shape has changed.
+Remove tag from subscriber by email address
+The URL path and HTTP verb has changed. POST /v3/tags/:id/unsubscribe -> DELETE /v4/tags/:tag_id/subscribers/:id
+The response shape has changed. We return a 204 empty response.
+The error response shape has changed.
+Webhooks
+
+The URL paths for webhooks have changed from /automations/hooks to /webhooks.
+Create a webhook
+The response shape has changed. The root object is webhook instead of rule.
+The error response shape has changed.
+Delete a webhook
+The response shape has changed. We return a 204 empty response.
+The error response shape has changed.
+OAuth Web Server App Flow
+
+ See an example of authenticating with Kit's OAuth Server in Node.js here
+1. User initiates install from Kit's App Store
+
+https://example.com/kit/oauth?redirect=https://app.kit.com/apps/1?success=true
+When a user installs your app from the Kit App Store, Kit redirects them to the Authorization URL you've configured.
+
+
+
+From here, your app should present the user a screen to sign in (or sign up).
+
+ Kit will append a redirect query parameter to your Authorization URL that you will need to save in order to complete the flow.
+2. App requests user's Kit identity
+
+After the user successfully authenticates with your app, redirect them to Kit's OAuth server to request their identity.
+
+GET https://app.kit.com/oauth/authorize
+
+Example redirect
+https://app.kit.com/oauth/authorize?
+  client_id=YOUR_CLIENT_ID&
+  response_type=code&
+  redirect_uri=https://oauth2.example.com/callback&
+  state=DEF456
+Parameters
+
+QUERY PARAMETERS
+
+client_id
+required
+string
+Your app's Client ID
+response_type
+required
+string
+code
+redirect_uri
+required
+string
+URI to redirect to
+scope
+string
+Default scope is public. Fine-grained access control via scopes coming soon.
+state
+string
+Custom state to pass to the redirect_uri and/or to protect from XSRF
+tenant_name
+string
+Unique, human-readable identifier for a tenant of a multi-tenant app.
+ The value supplied to redirect_uri must be one of the Redirect URIs configured in your app's settings, found on the *Distribution* tab.
+
+
+3. Kit prompts user for consent
+
+Kit will present a consent screen that asks the user to grant or refuse your app access to their account.
+
+
+
+4. Kit redirects to App OAuth callback with authorization code
+
+Example redirect
+https://oauth2.example.com/callback?
+  code=mrApixZzMPnYO28KoeIZxn2mvom1Tx48S9iyrQVYVE8&
+  state=DEF456
+If the user grants access, Kit redirects the user back to the redirect_uri you provided when requesting the user's identity in step 2.
+
+Kit appends a code query param with a temporary authorization code.
+
+ Kit also appends a state query param with the same value sent in the authorization request. This check helps verify that the user, not a malicious script, is making the request and reduces the risk of CSRF attacks.
+5. App exchanges authorization code for refresh and access tokens
+
+Your app uses the authorization code provided to obtain a refresh and access token.
+
+POST https://app.kit.com/oauth/token
+
+Body parameter
+{
+  "client_id": "YOUR_CLIENT_ID",
+  "client_secret": "YOUR_CLIENT_SECRET",
+  "grant_type": "authorization_code",
+  "code": "abc123",
+  "redirect_uri": "https://oauth2.example.com/callback"
+}
+Code samples
+curl -X POST https://app.kit.com/oauth/token \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -d '{
+    "client_id": "YOUR_CLIENT_ID",
+    "client_secret": "YOUR_CLIENT_SECRET",
+    "grant_type": "authorization_code",
+    "code": "abc123",
+    "redirect_uri": "https://oauth2.example.com/callback"
+  }'
+Parameters
+
+REQUEST BODY SCHEMA: application/json
+
+client_id
+required
+string
+Your app's Client ID
+client_secret
+required
+string
+Your app's Client Secret
+grant_type
+required
+string
+authorization_code
+code
+string
+The code received via the redirect uri query params
+redirect_uri
+string
+The redirect URI the request is coming from (must be one of your app's redirect URIs)
+Example responses
+200 Response
+{
+  "access_token": "YOUR_ACCESS_TOKEN_HERE",
+  "token_type": "Bearer",
+  "expires_in": 172800,
+  "refresh_token": "YOUR_REFRESH_TOKEN_HERE",
+  "scope": "public",
+  "created_at": 1710270147
+}
+Responses
+
+200
+Returns a token
+6. App redirects user back to Kit
+
+Now that the user has completed the OAuth flow, your app must send the the user back to Kit using the redirect parameter provided at the beginning of the flow.
+
+This will ensure the user properly navigates back to your app inside of Kit and registers that the app has been installed.
+
+7. App uses access token to make Kit API calls
+
+Code samples
+curl -X GET https://api.kit.com/v4/account \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+Your app can now make calls to Kit's API on behalf of the user by passing a Authorization header with the token as a Bearer value.
+
+8. App uses refresh token to obtain new access token after expiration
+
+The access token will eventually expire and a new one must be obtained using the refresh token obtained earlier.
+
+POST /oauth/token
+
+Body parameter
+{
+  "client_id": "YOUR_CLIENT_ID",
+  "grant_type": "refresh_token",
+  "refresh_token": "abc123"
+}
+Code samples
+curl -X POST https://app.kit.com/oauth/token \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -d '{
+    "client_id": "YOUR_CLIENT_ID",
+    "grant_type": "refresh_token",
+    "code": "abc123"
+  }'
+Parameters
+
+REQUEST BODY SCHEMA: application/json
+
+client_id
+required
+string
+Your app's Client ID
+grant_type
+required
+string
+refresh_token
+refresh_token
+required
+string
+The refresh token
+Example responses
+200 Response
+{
+  "access_token": "YOUR_NEW_ACCESS_TOKEN_HERE",
+  "token_type": "Bearer",
+  "expires_in": 7200,
+  "refresh_token": "YOUR_NEW_REFRESH_TOKEN_HERE",
+  "scope": "public",
+  "created_at": 1710271006
+}
+Responses
+
+200
+Returns a token
+OAuth SPA & Mobile App Flow
+
+1. User initiates install from Kit's App Store
+
+https://example.com/kit/oauth?redirect=https://app.kit.com/apps/1?success=true
+When a user installs your app from the Kit App Store, Kit redirects them to the Authorization URL you've configured.
+
+
+
+From here, your app should present the user a screen to sign in (or sign up).
+
+ Kit will append a redirect query parameter to your Authorization URL that you will need to save in order to complete the flow.
+2. App generates code verifier and challenge
+
+Before redirecting the user to the authorization server, the app must first generate a secret code verifier and challenge.
+
+The code verifier is a cryptographically random string using the characters A-Z, a-z, 0-9, and the punctuation characters -._~ (hyphen, period, underscore, and tilde), between 43 and 128 characters long.
+
+Once the app has generated the code verifier, it uses that to create the code challenge. The code challenge is a BASE64-URL-encoded string of the SHA256 hash of the code verifier.
+
+The app will need to store the code_verifier for later use.
+
+3. App requests user's Kit identity
+
+After the user successfully authenticates with your app and the code verifier and challenge have been generated, redirect them to Kit's OAuth server to request their identity.
+
+GET https://app.kit.com/oauth/authorize
+
+Example redirect
+https://app.kit.com/oauth/authorize?
+  client_id=YOUR_CLIENT_ID&
+  response_type=code&
+  redirect_uri=https://oauth2.example.com/callback&
+  code_challenge=N2U2ZjNiNDEzZDE4NzkwYzYyYTM5ZjEwMzM1NDUzY2IwYTNlNWM5ODQ2NWQyNGU5ZTdiMjZiY2E4Njc5ZjY3Zg&
+  code_challenge_method=S256&
+  state=DEF456
+Parameters
+
+QUERY PARAMETERS
+
+client_id
+required
+string
+Your app's Client ID
+response_type
+required
+string
+code
+redirect_uri
+required
+string
+URI to redirect to
+code_challenge
+required
+string
+A BASE64-URL-encoded string of the SHA256 hash of the code_verifier
+code_challenge_method
+required
+string
+S256
+scope
+string
+Default scope is public. Fine-grained access control via scopes coming soon.
+state
+string
+Custom state to pass to the redirect_uri and/or to protect from XSRF
+tenant_name
+string
+Unique, human-readable identifier for a tenant of a multi-tenant app
+ The value supplied to redirect_uri must be one of the Redirect URIs configured in your app's settings, found on the *Distribution* tab.
+
+
+4. Kit prompts user for consent
+
+Kit will present a consent screen that asks the user to grant or refuse your app access to their account.
+
+
+
+5. Kit redirects to App OAuth callback with authorization code
+
+Example redirect
+https://oauth2.example.com/callback?
+  code=mrApixZzMPnYO28KoeIZxn2mvom1Tx48S9iyrQVYVE8&
+  state=DEF456
+If the user grants access, Kit redirects the user back to the redirect_uri you provided when requesting the user's identity in step 2.
+
+Kit appends a code query param with a temporary authorization code.
+
+ Kit also appends a state query param with the same value sent in the authorization request. This check helps verify that the user, not a malicious script, is making the request and reduces the risk of CSRF attacks.
+6. App exchanges authorization code for refresh and access tokens
+
+Your app uses the authorization code provided to obtain a refresh and access token.
+
+POST https://app.kit.com/oauth/token
+
+Body parameter
+{
+  "client_id": "YOUR_CLIENT_ID",
+  "grant_type": "authorization_code",
+  "redirect_uri": "https://oauth.example.com/callback",
+  "code": "abc123",
+  "code_verifier": "add75a87509bca16dead084e7908824c8373cdeeb28341ae44713a6879f47be8f8fe6edfe9b8fa6917535e"
+}
+Code samples
+curl -X POST https://app.kit.com/oauth/token \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -H 'Accept: application/json' \
+  -d '{
+    "client_id": "YOUR_CLIENT_ID",
+    "grant_type": "authorization_code",
+    "code": "abc123",
+    "code_verifier": "add75a87509bca16dead084e7908824c8373cdeeb28341ae44713a6879f47be8f8fe6edfe9b8fa6917535e"
+    "redirect_uri": "https://oauth2.example.com/callback"
+  }'
+Parameters
+
+REQUEST BODY SCHEMA: application/json
+
+client_id
+required
+string
+Your app's Client ID
+grant_type
+required
+string
+authorization_code
+redirect_uri
+required
+string
+The redirect uri the request is coming from (must be one of your app's redirect
+code
+required
+string
+The code received via the redirect uri query
+code_verifier
+required
+string
+A cryptographically random string using the characters A-Z, a-z, 0-9, and the punctuation characters -._~ (hyphen, period, underscore, and tilde), between 43 and 128 characters long.
+Example responses
+200 Response
+{
+  "access_token": "YOUR_ACCESS_TOKEN_HERE",
+  "token_type": "Bearer",
+  "expires_in": 172800,
+  "refresh_token": "YOUR_REFRESH_TOKEN_HERE",
+  "scope": "public",
+  "created_at": 1710270147
+}
+Responses
+
+200
+Returns a token
+7. App redirects user back to Kit
+
+Now that the user has completed the OAuth flow, your app must send the the user back to Kit using the redirect parameter provided at the beginning of the flow.
+
+This will ensure the user properly navigates back to your app inside of Kit and registers that the app has been installed.
+
+8. App uses access token to make Kit API calls
+
+Code samples
+curl -X GET https://api.kit.com/v4/account \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+Your app can now make calls to Kit's API on behalf of the user by passing a Authorization header with the token as a Bearer value.
+
+9. App uses refresh token to obtain new access token after expiration
+
+The access token will eventually expire and a new one must be obtained using the refresh token obtained earlier.
+
+POST https://app.kit.com/oauth/token
+
+Body parameter
+{
+  "client_id": "YOUR_CLIENT_ID",
+  "grant_type": "refresh_token",
+  "refresh_token": "abc123"
+}
+Code samples
+curl -X POST https://app.kit.com/oauth/token \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -d '{
+    "client_id": "YOUR_CLIENT_ID",
+    "grant_type": "refresh_token",
+    "code": "abc123"
+  }'
+Parameters
+
+REQUEST BODY SCHEMA: application/json
+
+client_id
+required
+string
+Your app's Client ID
+grant_type
+required
+string
+refresh_token
+refresh_token
+required
+string
+The refresh token
+Example responses
+200 Response
+{
+  "access_token": "YOUR_NEW_ACCESS_TOKEN_HERE",
+  "token_type": "Bearer",
+  "expires_in": 7200,
+  "refresh_token": "YOUR_NEW_REFRESH_TOKEN_HERE",
+  "scope": "public",
+  "created_at": 1710271006
+}
+Responses
+
+200
+Returns a token
+Plugins
+
+Apps can configure plugins that extend the UI inside Kit.
+
+To get started, first sign into Kit and visit the Build tab in the Kit App Store to create your App, configure your plugin access, and create your plugins. More details on setting up apps or plugins can be found in our help center.
+
+We currently support two plugin environments:
+
+Content blocks
+Media source
+Plugin Authorization
+
+We currently support 2 authorization strategies for requesting data from your API.
+
+Create an API that supports OAuth 2.0, or
+Choose to create a publicly accessible API with no authorization (not recommended)
+OAuth Plugin
+
+For OAuth, you'll need to support 4 endpoints:
+
+Getting an authorization code grant
+Requesting an access token using an authorization code
+Requesting an access token using a refresh token
+Revoking an access token
+The endpoints must accept the requests outlined below and return responses minimally matching the outlined response shapes (additional attributes can be returned but we require at least what appears in these docs).
+
+The redirect URI we'll use for all of our requests will be https://app.kit.com/apps/install.
+
+We'll use Bearer Authorization to include the user's access token on all the requests we make to your endpoints.
+
+Get an authorization code grant
+
+Example redirect
+<YOUR_CONFIGURED_AUTHORIZATION_URL>?
+  client_id=<YOUR CONFIGURED CLIENT ID>&
+  response_type=code&
+  redirect_uri=https://app.kit.com/apps/install
+Code samples
+curl -G GET <YOUR CONFIGURED AUTHORIZE URL> \
+  -H 'Accept: text/html'
+  -d "client_id=<YOUR CONFIGURED CLIENT ID>"
+  -d "response_type=code"
+  -d "redirect_uri=https://app.kit.com/apps/install"
+GET <YOUR CONFIGURED AUTHORIZE URL>
+
+Parameters
+
+QUERY PARAMETERS
+
+client_id
+required
+string
+Your plugin's configured Client ID
+response_type
+required
+string
+code
+redirect_uri
+required
+string
+https://app.kit.com/apps
+state
+string
+Custom state to pass to the redirect_uri and/or to protect from XSRF
+Example responses
+302 Response
+"<html><body>You are being <a href=\"https://app.kit.com/apps">redirected</a>.</body></html>"
+Responses
+
+302
+Redirects to https://app.kit.com/apps with authorization code parameter
+Get a new token using an authorization code
+
+Body parameter
+{
+  "client_id": "<YOUR CONFIGURED CLIENT ID>",
+  "client_secret": "<YOUR CONFIGURED CLIENT SECRET>",
+  "grant_type": "authorization_code",
+  "code": "abc123",
+  "redirect_uri": "https://app.kit.com/apps"
+}
+Code samples
+curl -X POST <YOUR CONFIGURED TOKEN URL> \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -H 'Accept: application/json' \
+  -d '{
+    "client_id": "<YOUR CONFIGURED CLIENT ID>",
+    "client_secret": "<YOUR CONFIGURED CLIENT SECRET>",
+    "grant_type": "authorization_code",
+    "code": "abc123",
+    "redirect_uri": "https://app.kit.com/apps"
+  }
+POST <YOUR CONFIGURED TOKEN URL>
+
+Parameters
+
+REQUEST BODY SCHEMA: application/json
+
+client_id
+required
+string
+Your plugin's configured Client ID
+client_secret
+required
+string
+Your plugin's configured Client Secret
+grant_type
+required
+string
+authorization_code
+code
+required
+string
+The code received via the redirect uri query params
+redirect_uri
+required
+string
+https://app.kit.com/apps
+Example responses
+200 response
+{
+  "access_token": "YOUR_ACCESS_TOKEN_HERE",
+  "expires_in": 172800,
+  "refresh_token": "YOUR_REFRESH_TOKEN_HERE",
+  "created_at": 1710270147
+}
+Responses
+
+200
+Returns a token
+Get a new token using a refresh token
+
+Body parameter
+{
+  "client_id": "<YOUR CONFIGURED CLIENT ID>",
+  "grant_type": "refresh_token",
+  "refresh_token": "string"
+}
+Code samples
+curl -X POST <YOUR CONFIGURED REFRESH TOKEN URL> \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -H 'Accept: application/json' \
+  -d '{
+    "client_id": "<YOUR CONFIGURED CLIENT ID>",
+    "grant_type": "refresh_token",
+    "refresh_token": "abc123"
+  }'
+POST <YOUR CONFIGURED REFRESH TOKEN URL>
+
+Parameters
+
+REQUEST BODY SCHEMA: application/json
+
+client_id
+required
+string
+Your plugin's configured Client ID
+grant_type
+required
+string
+refresh_token
+refresh_token
+required
+string
+The refresh token
+Example responses
+200 response
+{
+  "access_token": "YOUR_NEW_ACCESS_TOKEN_HERE",
+  "expires_in": 7200,
+  "refresh_token": "YOUR_NEW_REFRESH_TOKEN_HERE",
+  "created_at": 1710271006
+}
+Responses
+
+200
+Returns a token
+Revoke an access token
+
+Body parameter
+{
+  "client_id": "<YOUR CONFIGURED CLIENT ID>",
+  "client_secret": "<YOUR CONFIGURED CLIENT SECRET>",
+  "token": "abc123"
+}
+Code samples
+curl -X POST <YOUR CONFIGURED REVOKE TOKEN URL> \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -H 'Accept: application/json' \
+  -d '{
+    "client_id": "<YOUR CONFIGURED CLIENT ID>",
+    "client_secret": "<YOUR CONFIGURED CLIENT SECRET>",
+    "token": "abc123"
+  }'
+POST <YOUR CONFIGURED REVOKE TOKEN URL>
+
+Parameters
+
+REQUEST BODY SCHEMA: application/json
+
+client_id
+required
+string
+Your plugin's configured Client ID
+client_secret
+required
+string
+Your plugin's configured Client Secret
+token
+required
+string
+The access token
+Example responses
+200 response
+{}
+Responses
+
+200
+OK
+Activating your plugin
+
+When you first create your plugin it will be inactive. While inactive it will only be available for your developer account. Note that you must install your app from the Build tab on the Kit App Store to see your plugins in the editor.
+
+Once activated, the plugin will be visible to any user who has installed the app.
+
+If a plugin is actively being used, we don't recommend editing the live version with any updates as these will be pushed out immediately to all creators with the app installed. Instead, create a new plugin and keep it inactive while making your changes. Once your tests are successful, you can update the original plugin.
+
+Content Blocks
+
+This functionality allows you to add your own elements to Kit's editor. The content of these elements are generated by endpoints on your server. You can submit your app to the Kit App Store for approval so your plugins can be used by other creators.
+
+To get started, first sign into our app and visit the Build tab on the Kit App Store to create your App, configure your plugin access, and create your plugins.
+
+Each plugin will appear as an item under your apps's name in our editor’s element menu. For more details on setting up apps and plugins, visit our app and plugin help center articles.
+
+
+
+Plugin Flow
+
+Let’s say you were developing an integration that allowed users to embed “Products” from your app inside the Kit editor. The full flow would look like this:
+
+You create a POST endpoint on your server to generate the HTML for your Product embed. (See HTML URL.)
+You create a POST endpoint on your server to allow users to search for products.
+This is only necessary if you add a Search Input, because we need to retrieve the results from somewhere.
+You create your app and configure the Product plugin in Kit's developer dashboard. You submit your app for approval.
+A user installs your app from the Kit App Store.
+The user opens Kit's editor and inserts your Product element.
+Any time they change its settings, our system makes a request to your endpoint from #1.
+We will include both the editor settings (for instance, the ID of the Product they want to embed) and their API access token, which you can use to validate if they have access.
+You will return the HTML for the user’s Product, which we'll insert into our editor.
+Plugin Configuration
+
+Example content block plugin:
+
+
+
+Name
+
+The Plugin name is the user-facing name for your block. In the screenshot above, “Post”, and “Product” are examples of labels. It will appear in the editor’s element menu, and also in the breadcrumbs at the top of the sidebar when your block is selected. Your label should be short, ideally one or two words.
+
+Description
+
+The Description is a short phrase describing your block. It will appear underneath the Label in the element menu. In the example above, “Add a link to a post” and “Add a link to a product”.
+
+Sort order
+
+If you offer multiple elements, the Sort Order determines their placement. In the image above, “Post” has a Sort Order of 0, while “Product” has a Sort Order of 1.
+
+Logo
+
+The Logo is an image for the element to be displayed alongside the Label and the Description. Only PNG, GIF, JPEG extensions are supported. The recommended size is 150x120px.
+
+HTML URL
+
+Example POST request body sent to your HTML URL
+{
+  "settings": {
+    // The exact data in this section depends on how you've configured your
+    // plugin's JSON settings (see next section).
+    "title": "My title",
+    "description": "My description"
+  }
+}
+The HTML URL is the URL of an endpoint on your server that returns an HTML string. This endpoint’s job is to generate the HTML for your element to be rendered in the email editor.
+
+You’ll generate this HTML based on the settings you’ve defined for your block (outlined in the next section). Once a user completes all required settings, we’ll make a POST request to your HTML URL. The request will contain a settings object with the user’s selected values for each of your settings.
+
+Example HTML response
+<div>
+  <h1>{{ settings.title }}</h1>
+  <p>{{ settings.description }}</p>
+</div>
+Your endpoint should return HTML for the element. An example can be found to the right.
+
+HTML success response
+{
+  "code": 200,
+  "html": "<div>...your HTML...</div>"
+}
+Your HTML URL should respond to this request with a JSON object containing an html key.
+
+HTML error response
+{
+  "code": 404,
+  "errors": ["Plan not found"]
+}
+Or, if you've encountered an error, return an object containing an errors array of strings. You may add as many errors to this array as you’d like:
+
+Settings JSON
+
+Example settings configuration
+[
+  {
+    "type": "text",
+    "name": "title",
+    "label": "Title",
+    "placeholder": "Enter a title...",
+    "required": true
+  },
+  {
+    "type": "color",
+    "name": "title_color",
+    "label": "Color",
+    "required": true
+  }
+]
+This field allows you to configure the sidebar settings for your element. It should be an array of objects; one object for each setting. For instance, this would be the JSON configuration for a plugin with two settings: “Title” and “Color”.
+
+Each setting’s type determines the UI rendered (such as a text input or a color picker); all available options are listed under the subheadings below.
+
+The name for each setting is used as the key in your HTML request.
+
+See Content Block Plugin Settings for all the possible settings you can configure.
+
+JSON schema
+{
+  "type": "array",
+  "items": {
+    "anyOf": [
+      {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["color"]
+          },
+          "name": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          }
+        },
+        "required": ["name", "label", "type"],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["fontFamily"]
+          },
+          "name": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          }
+        },
+        "required": ["name", "label", "type"],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["search"]
+          },
+          "name": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "request_url": {
+            "type": "string"
+          },
+          "placeholder": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          }
+        },
+        "required": ["type", "name", "label", "request_url"],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["select"]
+          },
+          "name": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "placeholder": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          }
+        },
+        "required": ["type", "name", "label", "options"],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["text"]
+          },
+          "name": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "placeholder": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          }
+        },
+        "required": ["name", "label", "type"],
+        "additionalProperties": false
+      }
+    ]
+  }
+}
+How settings JSON maps to the HTML request
+
+When you save your plugin via the developer settings, we’ll validate your JSON settings against the following schema.
+
+Plugin Settings
+
+Color Picker
+
+Color picker setting
+{
+  "type": "color",
+  "name": "background_color",
+  "label": "Background color",
+  "required": true, // optional
+  "help": "help text shown in tooltip to creator while editing" // optional
+}
+Use the type: color setting config for a color picker.
+
+
+
+Font Picker
+
+Font picker setting
+{
+  "type": "fontFamily",
+  "name": "paragraph_font",
+  "label": "Paragraph font",
+  "required": true, // optional
+  "help": "help text shown in tooltip to creator while editing" // optional
+}
+Font family setting example request
+{
+  "settings": {
+    "yourFontFieldName": {
+      "fontFamily": "'Courier New', Courier, monospace",
+      "fontWeight": 400,
+    }
+  }
+}
+Use the type: fontFamily setting config for a font family and font weight picker. Kit will automatically supply a list of email-friendly font families and their fallbacks.
+
+When requesting HTML, Kit will pass the user’s values for fontFamily fields as an object with a fontFamily and a fontWeight.
+
+
+
+
+
+Date Picker
+
+Date picker setting
+{
+  "type": "date",
+  "name": "start_date",
+  "label": "Start date",
+  "required": false, // optional
+  "help": "help text shown in tooltip to creator while editing" // optional
+}
+Use the type: date setting config for a date picker.
+
+All dates are returned in UTC, ISO8601 format such as: "2024-10-03T07:00:00.000Z"
+
+
+
+Search Input
+
+Search input setting
+{
+  "type": "search",
+  "name": "post",
+  "label": "Post",
+  "request_url": "https://example.com/path/to/your/search/endpoint",
+  "placeholder": "Select a post", // optional
+  "required": true, // optional
+  "help": "help text shown in tooltip to creator while editing", // optional
+  "dependencies": ["names", "of", "inputs", "to", "depend", "on"], // optional
+}
+Search setting example request
+{
+  "search": "Query the user typed"
+}
+Search setting example request with configured dependencies
+// if this is your search input configuration
+{
+  "type": "search",
+  "name": "post",
+  "label": "Post",
+  "request_url": "https://example.com/path/to/your/search/endpoint",
+  "dependencies": ["favorite_color"], // optional
+}
+
+// Kit will send a POST that includes the dependencies
+{
+  "favorite_color": "value user selected",
+  "search": "Query the user typed"
+}
+Search setting example success response
+{
+  "data": [
+    {
+      "label": "A post title",
+      "value": "post-id-123"
+    }
+  ]
+}
+Search setting example error response
+{
+  "data": [],
+  "errors": ["Plan not found"]
+}
+Use the type: search setting config for a search input.
+
+When the plugin loads, Kit will make a request to your provided request_url with an empty string search param. This allows you to autopopulate the search dropdown with default results.
+
+When the creator types into the search input, Kit will make a debounced request to your provided request_url to retrieve further filtered results.
+
+If a creator leaves their email in a draft state and edits again in the future, we'll make a request to your provided request_url with the value of the option they had previously selected. This allows us to fill the dropdown with your user-friendly label.
+
+The optional dependencies configuration allows you to wait to display a search input until the creator has entered values for all of the dependency inputs.
+
+Once all the dependencies have a value, your dependent search input will be displayed. And we will include the dependencies as parameters to your provided request_url.
+
+You should return an array of objects, each with a label-value pair.
+
+The label will be visible to users; it is used as the text for the result. The value is not visible to users, but will be sent when requesting HTML for your block.
+
+
+
+Select Input
+
+Select input setting
+{
+  "type": "select",
+  "name": "favorite_food",
+  "label": "Favorite food",
+  "options": [
+    {
+      "label": "French fries",
+      "value": "food-id-1"
+    },
+    {
+      "label": "Hash browns",
+      "value": "food-id-2"
+    },
+    {
+      "label": "Potato chips",
+      "value": "food-id-3"
+    }
+  ],
+  "placeholder": "Select a food...", // optional
+  "required": true, // optional
+  "help": "help text shown in tooltip to creator while editing" // optional
+}
+Use the type: select setting config for a select input, commonly called a “dropdown menu” with a predefined list of options. The chosen value is not visible to users, but will be sent when requesting HTML for your block.
+
+If you want to generate dynamic options, please use a Search Input instead.
+
+
+
+Text Input
+
+Text input setting
+{
+  "type": "text",
+  "name": "title",
+  "label": "Title",
+  "placeholder": "Enter a title...", // optional
+  "required": true, // optional
+  "help": "help text shown in tooltip to creator while editing" // optional
+}
+Use the type: text setting config for a single-line text input useful for entering short snippets of text.
+
+
+
+Required settings
+
+You can optionally add required: true to a setting. We won’t request HTML from your server until all required settings are complete.
+
+Help text
+
+You can optionally add help text for creators when using your plugin. You can add help: "some help text" to any setting and we'll render a tooltip on your input label with your help text.
+
+Refreshing data
+
+After a user has configured all required settings, we will perform a request to your server for the block's HTML. If the user wants to refresh the data, they can either:
+
+Click the refresh button that appears when hovering over the element (pictured below), or
+Change one of your plugin’s settings in the sidebar, which will automatically kick off another request for new HTML.
+refresh plugin data
+
+Plugin Security
+
+When we receive an HTML string from your server, we will sanitize it to conform with recommended security practices. That means we’ll reject your HTML response if it includes any of the following:
+
+Scripts, iframes
+Audio, video elements
+Form, input, command, action, prompt elements
+External CSS styles, and CSS URLs
+Plugin Recommendations
+
+Using media queries for responsive CSS
+<style>
+  @media only screen and (max-width:600px) {
+    .a-unique-class { ... }
+  }
+</style>
+
+<div class="a-unique-class">
+  ...
+</div>
+For email client compatibility, we suggest that you use inline style attributes such as <div style="color: red;"></div> instead of CSS classes.
+The only exception is if you need to include media queries to make your elements responsive on mobile
+To test email client compatibility, we recommend using https://www.caniemail.com and https://www.litmus.com/
+Include target=_blank to all links
+
+Use the full path URL for all links to ensure they can be opened
+
+In most cases, you shouldn’t apply a background color to your plugin (unless the user is able to customize it). This is because the user might be using a custom background color on their email. By not applying a background color, your element’s background will automatically be the same as their email.
+
+Example Plugin
+
+You can view an example content block plugin implementation here.
+
+Media Source
+
+This functionality allows you to add your own images into Kit’s media gallery, letting creators search, filter and sort content from 3rd party sources right from the Kit email editor.
+
+To get started, first sign into our app and visit the Build tab on Kit App Store to create your App, configure your plugin access, and create your plugins.
+
+Each plugin will appear as an item under your company's name in our editor’s element menu as well as in the sidebar for the media gallery. For more details on setting up apps and plugins, visit our app and plugin help center articles.
+
+Plugin Flow
+
+Create a POST endpoint on your server to generate the JSON to render your media in the media gallery (see request URL below)
+Optionally… a. If using a dynamic filter (see dynamic select below), create a POST endpoint on your server to return the elements for the filter select menu b. If you require notification for image insertion (see request URL below), create a POST endpoint on your server that we will call when an image has been placed into an email
+Create your app and configure the plugin in the Build tab on the Kit App Store. When completed, submit your app for approval
+A user installs your app from the Kit App Store.
+The user opens Kit's email editor and opens up your plugin in the media gallery
+Upon opening your plugin in the media gallery, our system makes an initial request to the endpoint in #1 for the default list of images we should show from your server a. If your settings include a dynamic select, we will also make a request to the endpoint in #2a to render the select elements
+Any time the creator interacts with and fills out all required settings, our system makes a request to your endpoint from #1 with the values
+You will return the JSON for the media source, which we'll use to render the images in the media gallery for selection
+A creator scrolls through the list, triggering additional pagination requests
+A creator selects an image, whereby Kit inserts the image into the email content
+Plugin Configuration
+
+Example media source content block item:
+
+Media source content block
+
+Example media source plugin:
+
+Media source in media gallery
+
+Name
+
+The plugin name is the user-facing name for your block and will be shown in the content block menu and in the media gallery itself. In the example above, the plugin name is “Your plugin name”. Your name should be short, ideally one or two words.
+
+Description
+
+The description is a short phrase describing your media source. It will appear underneath the name in the content block menu. In the example above this is set to “Short description for the plugin”.
+
+Sort order
+
+If you have multiple media sources within the same app, the sort order determines their placement within both the media gallery and the content block menu. In the images above, “Your plugin name” has a Sort Order of 0, while “Your plugin name 2” has a Sort Order of 1.
+
+Logo
+
+The Logo is an image for the element to be displayed alongside the Label and the Description. Only PNG, GIF, JPEG extensions are supported. The recommended size is 150x120px.
+
+Request URL
+
+The request URL is the URL of an endpoint on your server that returns the list of images, complete with all the necessary properties to render the images in the gallery and place them within the email content for use by the creator.
+
+You’ll generate this response based on the settings you’ve defined for your media source (outlined in the next section). Once a user completes all required settings, we’ll make a POST request to your request URL.
+
+The request will contain a settings object with the user’s selected values for each of your search, filter, and sort settings, as well as pagination details, like so:
+
+GET <YOUR CONFIGURED ENDPOINT URL>
+
+Note - your app should also handle the empty case, ensuring you show some media by default when the creator opens up your plugin without interacting with any of the configuration elements your app offers.
+
+If you've encountered an error, return an object containing an errors array of strings. You may add as many errors to this array as you’d like.
+
+Example request
+<YOUR_CONFIGURED_ENDPOINT_URL>?
+  after=WzE0XQ==&
+  settings[query]=Dogs&
+  settings[label]=My Media&
+  settings[sort]=updated_desc
+Parameters
+
+QUERY PARAMETERS
+
+after
+string
+A cursor for paginating forwards through the media items.
+before
+string
+A cursor for paginating backwards through the media items.
+per_page
+integer
+A number to limit the amount of media items returned in the payload.
+settings[<name>]
+string
+A setting value entered. The name will be set to the name configured for the plugin setting.
+Example responses
+200 response
+{
+  "pagination": {
+    "has_previous_page": false,
+    "has_next_page": true,
+    "start_cursor": "WzEzXQ==",
+    "end_cursor": "WzE0XQ==",
+    "per_page": 100
+  },
+  "data": [
+    {
+      "id": "example1",
+      "type": "image",
+      "url": "https://picsum.photos/600/900",
+      "thumbnail_url": "https://picsum.photos/200/400",
+      "alt": "Lorem ipsum odor amet, consectetuer adipiscing elit."
+    },
+    {
+      "id": "example2",
+      "type": "image",
+      "url": "https://picsum.photos/500/800",
+      "thumbnail_url": "https://picsum.photos/200/400",
+      "alt": "Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+    }
+  ]
+}
+200 response with additional properties
+{
+  "pagination": {
+    "has_previous_page": false,
+    "has_next_page": true,
+    "start_cursor": "WzEzXQ==",
+    "end_cursor": "WzE0XQ==",
+    "per_page": 100
+  },
+  "data": [
+    {
+      "id": "example1",
+      "type": "image",
+      "url": "https://picsum.photos/600/900",
+      "thumbnail_url": "https://picsum.photos/600/900",
+      "alt": "Lorem ipsum odor amet, consectetuer adipiscing elit.",
+      "caption": "Lorem ipsum odor amet",
+      "title": "example.png",
+      "notify_download_url": "https://media-gallery-plugin.com/media/0/downloaded",
+      "hotlink": true,
+      "attribution": {
+        "label": "Johnny Appleseed",
+        "href": "https://example.com/johnny_appleseed?utm_source=your_app_name&utm_medium=referral"
+      }
+    }
+  ]
+}
+Responses
+
+200
+Returns a paginated list of media items
+Settings JSON
+
+Example settings configuration
+[
+  {
+    "type": "group",
+    "name": "search_group",
+    "settings": [
+      {
+        "type": "text",
+        "name": "search",
+        "label": "Search",
+        "help": "Search Giphy",
+        "required": false
+      }
+    ]
+  },
+  {
+    "type": "group",
+    "name": "filter_group",
+    "settings": [
+      {
+        "type": "select",
+        "label": "Rating",
+        "name": "rating",
+        "options": [
+          { "label": "G", "value": "g" },
+          { "label": "PG", "value": "pg" },
+          { "label": "PG-13", "value": "pg-13" }
+        ],
+        "required": false
+      }
+    ]
+  },
+  {
+    "type": "group",
+    "name": "sort_group",
+    "settings": [
+      {
+        "type": "select",
+        "name": "sort",
+        "label": "Sort",
+        "options": [
+          { "label": "Alphabetical (A-Z)", "value": "alphabetical_asc" },
+          { "label": "Alphabetical (Z-A)", "value": "alphabetical_desc" }
+        ]
+      }
+    ]
+  }
+]
+The media gallery supports three optional groups that settings can be placed in: search_group, filter_group, & sort_group. Each group currently accepts a single setting that can be used by creators to filter and sort your content for ease of use.
+
+An simple example configuration showing search, filter and sort can be found to the right.
+
+Details on the individual configuration options can be found below.
+
+Plugin Settings
+
+Search
+
+Search input setting
+{
+  "type": "group",
+  "name": "search_group",
+  "settings": [
+    {
+      "type": "text",
+      "name": "search",
+      "label": "Search",
+      "help": "Search Giphy",
+      "required": false
+    }
+  ]
+}
+Media source search
+
+The optional search functionality utilizes “type”: “text” to offer a way for creators to filter your images through a text filter.
+
+It is good practice to make this as smart as possible - ensuring that you return the elements that make sense with the text inputted by the user. This means matching against the name of the image, but also any other relevant metadata a creator may be filtering by (e.g. you may want to include the name of the Folder within the search logic). Upon keystroke, a new POST request will be made to the Request URL specified, with the text inputted, for your app to return a newly sorted version of results.
+
+Filter
+
+Media source filter
+
+Select Input
+
+Select input setting
+{
+  "type": "group",
+  "name": "filter_group",
+  "settings": [
+    {
+      "type": "select",
+      "label": "Rating",
+      "name": "rating",
+      "options": [
+        { "label": "G", "value": "g" },
+        { "label": "PG", "value": "pg" },
+        { "label": "PG-13", "value": "pg-13" },
+        { "label": "R", "value": "r" }
+      ],
+      "required": false
+    }
+  ]
+}
+The optional filter functionality utilizes “type”: “select” to offer a flat list of pre-defined filter options the creator can select from, each with a label and value nested in an options array. Currently, only single-select functionality is available here. Once an option is selected, a new POST request will be made to the Request URL specified, with the value selected, for your app to return a newly sorted version of results.
+
+Dynamic Select Input
+
+Dynamic select input setting
+{
+  "type": "group",
+  "name": "filter_group",
+  "settings": [
+    {
+      "type": "dynamic_select",
+      "label": "Folders",
+      "name": "folder",
+      "request_url": "https://example-plugin.com/folders",
+      "required": false
+    }
+  ]
+}
+The optional dynamic filter functionality utilizes “type”: “dynamic_select” to offer a flat list of dynamic filter options the creator can select from. For this, we will make a request to the POST endpoint you have created on your server to return the elements for the filter select menu as soon as the plugin is visited within the media gallery.
+
+The response will return an array of options, each with a label and value. Currently, only single-select functionality is available here. Once an option is selected, a new POST request will be made to the Request URL specified, with the value selected, for your app to return a newly sorted version of results.
+
+Dynamic select setting example success response
+{
+  "options": [
+    {
+      "label": "Home",
+      "value": "home"
+    },
+    {
+      "label": "Favorites",
+      "value": "favorites"
+    },
+    {
+      "label": "Shared",
+      "value": "shared"
+    }
+  ]
+}
+Sort
+
+Sort setting
+{
+  "type": "group",
+  "name": "sort_group",
+  "settings": [
+    {
+      "type": "select",
+      "name": "sort",
+      "label": "Sort",
+      "options": [
+        { "label": "Alphabetical (A-Z)", "value": "alphabetical_asc" },
+        { "label": "Alphabetical (Z-A)", "value": "alphabetical_desc" }
+      ]
+    }
+  ]
+}
+Media source sort
+
+The optional sort functionality utilizes “type”: “select” to offer a flat list of sort options the creator can select from, each with a label and value nested in an options array. Once an option is selected, a new POST request will be made to the Request URL specified, with the value selected, for your app to return a newly sorted version of results.
+
+Plugin Recommendations
+
+For the best creator experience, ensure the resolution for the thumbnail is sufficient to best showcase the full image within the media gallery - this may mean using the full image asset rather than a traditional thumbnail
+Alt text is important to ensure accessibility for all creators, regardless of how they use our service, making sure this is clear is integral for a high quality plugin
+We recommend to only use hotlinks where absolutely necessary - such as if your image URL expires, or your platfrom prohibits the use of a copy of the image - to ensure the asset is always available for use
+Example Plugin
+
+You can view an example media source plugin implementation here.
+
+Reference
+
+Accounts
+
+Get current account
+
+Code samples
+curl -X GET https://api.kit.com/v4/account \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+GET /v4/account
+
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+Responses
+
+Example responses
+200 Response
+{
+  "user": {
+    "email": "test@convertkit.dev"
+  },
+  "account": {
+    "name": "Kit Greetings",
+    "plan_type": "creator",
+    "primary_email_address": "test@convertkit.dev",
+    "created_at": "2023-02-17T11:43:55Z",
+    "id": 26,
+    "timezone": {
+      "name": "America/New_York",
+      "friendly_name": "Eastern Time (US & Canada)",
+      "utc_offset": "-05:00"
+    }
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+200
+Returns current account and user info
+401
+Returns a 401 if the token and/or account cannot be authenticated
+List colors
+
+Code samples
+curl -X GET https://api.kit.com/v4/account/colors \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+GET /v4/account/colors
+
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+Responses
+
+Example responses
+200 Response
+{
+  "colors": [
+    "#008000",
+    "#FF0000"
+  ]
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+200
+Returns list of colors for the current account
+401
+Returns a 401 if the token and/or account cannot be authenticated
+Update colors
+
+Code samples
+curl -X PUT https://api.kit.com/v4/account/colors \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+PUT /v4/account/colors
+
+Body parameter
+{
+  "colors": [
+    "#000000",
+    "#ffffff"
+  ]
+}
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+REQUEST BODY SCHEMAapplication/json
+
+colors
+required
+[string]
+An array of up to 5 color hex codes
+Responses
+
+Example responses
+200 Response
+{
+  "colors": [
+    "#000000",
+    "#ffffff"
+  ]
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+422 Response
+{
+  "errors": [
+    "Colors #123_not_a_code is not a valid hex color code."
+  ]
+}
+200
+Updates and returns list of colors for the current account
+401
+Returns a 401 if the token and/or account cannot be authenticated
+422
+Returns a 422 with an error message when invalid color code is provided
+Get Creator Profile
+
+Code samples
+curl -X GET https://api.kit.com/v4/account/creator_profile \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+GET /v4/account/creator_profile
+
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+Responses
+
+Example responses
+200 Response
+{
+  "profile": {
+    "name": "A Creator's Journey",
+    "byline": "A Creator",
+    "bio": "Follow my Journey as a Creator",
+    "image_url": "https://convertkit.dev/image.jpg?fit=crop&h=320&w=320",
+    "profile_url": "https://kit-greetings.ck.page/profile"
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+404 Response
+{
+  "errors": [
+    "Not Found"
+  ]
+}
+200
+Returns Creator Profile details
+401
+Returns a 401 if the token and/or account cannot be authenticated
+404
+Returns a 404 if the creator profile doesn't exist
+Get email stats
+
+Code samples
+curl -X GET https://api.kit.com/v4/account/email_stats \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+GET /v4/account/email_stats
+
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+Responses
+
+Example responses
+200 Response
+{
+  "stats": {
+    "sent": 6,
+    "clicked": 3,
+    "opened": 6,
+    "email_stats_mode": "last_90",
+    "open_tracking_enabled": true,
+    "click_tracking_enabled": true,
+    "starting": "2022-11-19T11:43:55Z",
+    "ending": "2023-02-17T11:43:55Z"
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+200
+Returns your email stats for the last 90 days
+401
+Returns a 401 if the token and/or account cannot be authenticated
+Get growth stats
+
+Code samples
+curl -X GET https://api.kit.com/v4/account/growth_stats \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+GET /v4/account/growth_stats
+
+Get growth stats for a specific time period. Defaults to last 90 days.
+
+NOTE: We return your stats in your sending time zone. This endpoint does not return timestamps in UTC.
+
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+QUERY PARAMETERS
+
+ending
+string
+Example: ending=02/09/2023
+Get stats for time period ending on this date (format yyyy-mm-dd). Defaults to today.
+starting
+string
+Example: starting=02/10/2023
+Get stats for time period beginning on this date (format yyyy-mm-dd). Defaults to 90 days ago.
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+Responses
+
+Example responses
+200 Response
+{
+  "stats": {
+    "cancellations": 0,
+    "net_new_subscribers": 3,
+    "new_subscribers": 3,
+    "subscribers": 3,
+    "starting": "2023-02-10T00:00:00-05:00",
+    "ending": "2023-02-24T23:59:59-05:00"
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+422 Response
+{
+  "errors": [
+    "Starting date is incorrectly formatted. Use YYYY-MM-DD.",
+    "Ending date is incorrectly formatted. Use YYYY-MM-DD.",
+    "Starting date must be before the ending date."
+  ]
+}
+200
+Returns your growth stats for the provided starting and ending dates
+401
+Returns a 401 if the token and/or account cannot be authenticated
+422
+Returns a 422 with an error message if the starting or ending params are misformatted or the range is invalid
+Broadcasts
+
+List broadcasts
+
+Code samples
+curl -X GET https://api.kit.com/v4/broadcasts \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+GET /v4/broadcasts
+
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+QUERY PARAMETERS
+
+after
+any
+Example: after=WzFd
+To fetch next page of results, use ?after=<end_cursor>
+before
+any
+Example: before=WzNd
+To fetch previous page of results, use ?before=<start_cursor>
+include_total_count
+string
+Example: include_total_count=false
+To include the total count of records in the response, use true. For large collections, expect a slightly slower response.
+per_page
+any
+Example: per_page=10
+Number of results per page. Default 500, maximum 1000.
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+Responses
+
+Example responses
+200 Response
+{
+  "broadcasts": [
+    {
+      "id": 3,
+      "publication_id": 3,
+      "created_at": "2023-02-17T11:43:55Z",
+      "subject": "Campaign subject 3",
+      "preview_text": null,
+      "description": null,
+      "content": null,
+      "public": false,
+      "published_at": null,
+      "send_at": null,
+      "thumbnail_alt": null,
+      "thumbnail_url": null,
+      "email_address": null,
+      "email_template": {
+        "id": 6,
+        "name": "Text Only"
+      },
+      "subscriber_filter": [
+        {
+          "all": [
+            {
+              "type": "all_subscribers"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "publication_id": 2,
+      "created_at": "2023-02-17T11:43:55Z",
+      "subject": "Campaign subject 2",
+      "preview_text": null,
+      "description": null,
+      "content": null,
+      "public": false,
+      "published_at": null,
+      "send_at": null,
+      "thumbnail_alt": null,
+      "thumbnail_url": null,
+      "email_address": null,
+      "email_template": {
+        "id": 6,
+        "name": "Text Only"
+      },
+      "subscriber_filter": [
+        {
+          "all": [
+            {
+              "type": "all_subscribers"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "publication_id": 1,
+      "created_at": "2023-02-17T11:43:55Z",
+      "subject": "Campaign subject 1",
+      "preview_text": null,
+      "description": null,
+      "content": null,
+      "public": false,
+      "published_at": null,
+      "send_at": null,
+      "thumbnail_alt": null,
+      "thumbnail_url": null,
+      "email_address": null,
+      "email_template": {
+        "id": 6,
+        "name": "Text Only"
+      },
+      "subscriber_filter": [
+        {
+          "all": [
+            {
+              "type": "all_subscribers"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "pagination": {
+    "has_previous_page": false,
+    "has_next_page": false,
+    "start_cursor": "WzNd",
+    "end_cursor": "WzFd",
+    "per_page": 500
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+200
+Returns a paginated list of all broadcasts for your account (including draft, scheduled, and already sent)
+401
+Returns a 401 if the token and/or account cannot be authenticated
+Create a broadcast
+
+Code samples
+curl -X POST https://api.kit.com/v4/broadcasts \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+POST /v4/broadcasts
+
+Draft or schedule to send a broadcast to all or a subset of your subscribers.
+
+To save a draft, set send_at to null.
+
+To publish to the web, set public to true.
+
+To schedule the broadcast for sending, provide a send_at timestamp. Scheduled broadcasts should contain a subject and your content, at a minimum.
+
+We currently support targeting your subscribers based on segment or tag ids.
+
+Starting point templates are not currently supported.
+Body parameter
+{
+  "email_template_id": 2,
+  "email_address": null,
+  "content": "<p>Let me introduce myself</p>",
+  "description": "Intro email",
+  "public": true,
+  "published_at": "2023-02-17T11:43:55+00:00",
+  "send_at": null,
+  "thumbnail_alt": null,
+  "thumbnail_url": null,
+  "preview_text": "Pleased to meet you!",
+  "subject": "Hello!",
+  "subscriber_filter": [
+    {
+      "all": [
+        {
+          "type": "segment",
+          "ids": [
+            16
+          ]
+        }
+      ],
+      "any": null,
+      "none": null
+    }
+  ]
+}
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+REQUEST BODY SCHEMAapplication/json
+
+email_template_id
+required
+integer or null
+Id of the email template to use. Uses the account's default template if not provided. 'Starting point' template is not supported.
+email_address
+required
+string or null
+The sending email address to use. Uses the account's sending email address if not provided.
+content
+required
+string or null
+The HTML content of the email.
+description
+required
+string or null
+public
+required
+boolean or null
+true to publish this broadcast to the web. The broadcast will appear in a newsletter feed on your Creator Profile and Landing Pages.
+published_at
+required
+string or null
+The published timestamp to display in ISO8601 format. If no timezone is provided, UTC is assumed.
+send_at
+required
+string or null
+The scheduled send time for this broadcast in ISO8601 format. If no timezone is provided, UTC is assumed.
+thumbnail_alt
+required
+string or null
+thumbnail_url
+required
+string or null
+preview_text
+required
+string or null
+subject
+required
+string or null
+subscriber_filter
+required
+[object] or null
+Filters your subscribers. At this time, we only support using only one filter group type via the API (e.g. all, any, or none but no combinations). If nothing is provided, will default to all of your subscribers.
+» all
+required
+[object] or null
+Filters your subscribers using a logical AND of all provided segment and tag ids, i.e. a subscriber would have to be part of all segments and tags provided
+»» type
+required
+string
+segment or tag
+»» ids
+required
+[integer]
+» any
+required
+[object] or null
+Filters your subscribers using a logical OR of all provided segment and tag ids, i.e. a subscriber would have to be part of at least one of the segments or tags provided
+»» type
+required
+string
+segment or tag
+»» ids
+required
+[string]
+» none
+required
+[object] or null
+Filters your subscribers using a logical NOT of all provided segment and tag ids, i.e. a subscriber would have to be in none of the segments or tags provided
+»» type
+required
+string
+segment or tag
+»» ids
+required
+[string]
+Responses
+
+Example responses
+201 Response
+{
+  "broadcast": {
+    "id": 28,
+    "created_at": "2023-02-17T11:43:55Z",
+    "subject": "Hello!",
+    "preview_text": "Pleased to meet you!",
+    "description": "Intro email",
+    "content": "<p>Let me introduce myself</p>",
+    "public": true,
+    "published_at": "2023-02-17T11:43:55Z",
+    "send_at": null,
+    "thumbnail_alt": null,
+    "thumbnail_url": null,
+    "email_address": "greetings@convertkit.dev",
+    "email_template": {
+      "id": 2,
+      "name": "Classic"
+    },
+    "subscriber_filter": [
+      {
+        "all": [
+          {
+            "type": "segment",
+            "ids": [
+              16
+            ]
+          }
+        ]
+      }
+    ],
+    "publication_id": 28
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+403 Response
+{
+  "errors": [
+    "You do not have sufficient permissions to access this resource. Please contact support."
+  ]
+}
+422 Response
+{
+  "errors": [
+    "Email template not found",
+    "Only a single filter group is supported. Use one of `all`, `any`, or `none`."
+  ]
+}
+201
+Creates a new broadcast
+401
+Returns a 401 if the token and/or account cannot be authenticated
+403
+Returns a 403 with an error message if the current account is unauthorized to create a broadcast
+422
+Returns a 422 with an error message when one or more of the parameters were invalid
+Get stats for a list of broadcasts
+
+Code samples
+curl -X GET https://api.kit.com/v4/broadcasts/stats \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+GET /v4/broadcasts/stats
+
+NOTE: This endpoint requires either a Pro level plan or developer authorization. Reach out here to get authorized!
+
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+Responses
+
+Example responses
+200 Response
+{
+  "broadcasts": [
+    {
+      "id": 145,
+      "stats": {
+        "recipients": 0,
+        "open_rate": 0,
+        "emails_opened": 0,
+        "click_rate": 0,
+        "unsubscribe_rate": 0,
+        "unsubscribes": 0,
+        "total_clicks": 0,
+        "show_total_clicks": false,
+        "status": "draft",
+        "progress": 0,
+        "open_tracking_disabled": false,
+        "click_tracking_disabled": false
+      }
+    },
+    {
+      "id": 144,
+      "stats": {
+        "recipients": 0,
+        "open_rate": 0,
+        "emails_opened": 0,
+        "click_rate": 0,
+        "unsubscribe_rate": 0,
+        "unsubscribes": 0,
+        "total_clicks": 0,
+        "show_total_clicks": false,
+        "status": "draft",
+        "progress": 0,
+        "open_tracking_disabled": false,
+        "click_tracking_disabled": false
+      }
+    }
+  ],
+  "pagination": {
+    "has_previous_page": false,
+    "has_next_page": false,
+    "start_cursor": "WzE0NV0=",
+    "end_cursor": "WzE0NF0=",
+    "per_page": 500
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+403 Response
+{
+  "errors": "Developer account must be on pro plan or have been approved to use the bulk stats endpoint."
+}
+200
+Returns stats for all broadcasts on the account
+401
+Returns a 401 if the token and/or account cannot be authenticated
+403
+Returns 403 if the account is not on a pro plan and has the feature flag disabled
+Get link clicks for a broadcast
+
+Code samples
+curl -X GET https://api.kit.com/v4/broadcasts/{broadcast_id}/clicks \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+GET /v4/broadcasts/{broadcast_id}/clicks
+
+NOTE: Pagination parameters control the list of clicks for the top level broadcast.
+
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+PATH PARAMETERS
+
+broadcast_id
+required
+integer
+Example: 113
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+Responses
+
+Example responses
+200 Response
+{
+  "broadcast": {
+    "id": 111,
+    "clicks": [
+      {
+        "url": "https://example.com/46",
+        "unique_clicks": 3,
+        "click_to_delivery_rate": 0.006,
+        "click_to_open_rate": 0.03
+      },
+      {
+        "url": "https://example.com/47",
+        "unique_clicks": 3,
+        "click_to_delivery_rate": 0.006,
+        "click_to_open_rate": 0.03
+      },
+      {
+        "url": "https://example.com/48",
+        "unique_clicks": 3,
+        "click_to_delivery_rate": 0.006,
+        "click_to_open_rate": 0.03
+      }
+    ]
+  },
+  "pagination": {
+    "has_previous_page": false,
+    "has_next_page": false,
+    "start_cursor": "WzE4XQ==",
+    "end_cursor": "WzE4XQ==",
+    "per_page": 500
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+404 Response
+{
+  "errors": [
+    "Not Found"
+  ]
+}
+200
+Returns clicks for a broadcast
+401
+Returns a 401 if the token and/or account cannot be authenticated
+404
+Returns a 404 when the provided id does not exist
+Get stats for a broadcast
+
+Code samples
+curl -X GET https://api.kit.com/v4/broadcasts/{broadcast_id}/stats \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+GET /v4/broadcasts/{broadcast_id}/stats
+
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+PATH PARAMETERS
+
+broadcast_id
+required
+integer
+Example: 164
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+Responses
+
+Example responses
+200 Response
+{
+  "broadcast": {
+    "id": 163,
+    "stats": {
+      "recipients": 0,
+      "open_rate": 0,
+      "emails_opened": 0,
+      "click_rate": 0,
+      "unsubscribe_rate": 0,
+      "unsubscribes": 0,
+      "total_clicks": 0,
+      "show_total_clicks": false,
+      "status": "draft",
+      "progress": 0,
+      "open_tracking_disabled": false,
+      "click_tracking_disabled": false
+    }
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+404 Response
+{
+  "errors": [
+    "Not Found"
+  ]
+}
+200
+Returns stats for a broadcast
+401
+Returns a 401 if the token and/or account cannot be authenticated
+404
+Returns a 404 when the provided id does not exist
+Delete a broadcast
+
+Code samples
+curl -X DELETE https://api.kit.com/v4/broadcasts/{id} \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -H 'Accept: ' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+DELETE /v4/broadcasts/{id}
+
+Body parameter
+{}
+
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+PATH PARAMETERS
+
+id
+required
+integer
+Example: 83
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+Responses
+
+Example responses
+204 Response
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+403 Response
+{
+  "errors": [
+    "You do not have sufficient permissions to access this resource. Please contact support."
+  ]
+}
+404 Response
+{
+  "errors": [
+    "Not Found"
+  ]
+}
+422 Response
+{
+  "errors": [
+    "Broadcast is already sending."
+  ]
+}
+204
+Deletes the broadcast
+401
+Returns a 401 if the token and/or account cannot be authenticated
+403
+Returns a 403 with an error message if the current account is unauthorized to update a broadcast
+404
+Returns a 404 when the provided id does not exist
+422
+Returns a 422 with an error message if the broadcast has already started sending or already sent
+Get a broadcast
+
+Code samples
+curl -X GET https://api.kit.com/v4/broadcasts/{id} \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+GET /v4/broadcasts/{id}
+
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+PATH PARAMETERS
+
+id
+required
+integer
+Example: 23
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+Responses
+
+Example responses
+200 Response
+{
+  "broadcast": {
+    "id": 22,
+    "created_at": "2023-02-17T11:43:55Z",
+    "subject": "You'll never guess...",
+    "description": null,
+    "content": null,
+    "public": false,
+    "published_at": null,
+    "send_at": null,
+    "thumbnail_alt": null,
+    "thumbnail_url": null,
+    "email_address": null,
+    "preview_text": null,
+    "email_template": {
+      "id": 6,
+      "name": "Text Only"
+    },
+    "subscriber_filter": [
+      {
+        "all": [
+          {
+            "type": "all_subscribers"
+          }
+        ]
+      }
+    ],
+    "publication_id": 22,
+    "clicks": [
+      {
+        "url": "https://example.com/52",
+        "unique_clicks": 3,
+        "click_to_delivery_rate": 0.15,
+        "click_to_open_rate": 0.3
+      },
+      {
+        "url": "https://example.com/53",
+        "unique_clicks": 3,
+        "click_to_delivery_rate": 0.15,
+        "click_to_open_rate": 0.3
+      },
+      {
+        "url": "https://example.com/54",
+        "unique_clicks": 3,
+        "click_to_delivery_rate": 0.15,
+        "click_to_open_rate": 0.3
+      }
+    ],
+    "stats": {
+      "recipients": 20,
+      "open_rate": 0,
+      "emails_opened": 10,
+      "click_rate": 0,
+      "unsubscribe_rate": 0,
+      "unsubscribes": 0,
+      "total_clicks": 9,
+      "show_total_clicks": false,
+      "status": "draft",
+      "progress": 0,
+      "open_tracking_disabled": false,
+      "click_tracking_disabled": false
+    }
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+404 Response
+{
+  "errors": [
+    "Not Found"
+  ]
+}
+200
+Returns the broadcast details
+401
+Returns a 401 if the token and/or account cannot be authenticated
+404
+Returns a 404 when the provided id does not exist
+Update a broadcast
+
+Code samples
+curl -X PUT https://api.kit.com/v4/broadcasts/{id} \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+PUT /v4/broadcasts/{id}
+
+Update an existing broadcast. Continue to draft or schedule to send a broadcast to all or a subset of your subscribers.
+
+To save a draft, set public to false.
+
+To schedule the broadcast for sending, set public to true and provide send_at. Scheduled broadcasts should contain a subject and your content, at a minimum.
+
+We currently support targeting your subscribers based on segment or tag ids.
+
+Body parameter
+{
+  "email_template_id": 2,
+  "email_address": null,
+  "content": "<p>Let me introduce myself</p>",
+  "description": "Intro email",
+  "public": true,
+  "published_at": "2023-02-17T11:43:55+00:00",
+  "send_at": "2023-02-17T11:43:55+00:00",
+  "thumbnail_alt": null,
+  "thumbnail_url": null,
+  "preview_text": "Pleased to meet you!",
+  "subject": "Hello!",
+  "subscriber_filter": [
+    {
+      "all": [
+        {
+          "type": "segment",
+          "ids": [
+            41
+          ]
+        }
+      ],
+      "any": null,
+      "none": null
+    }
+  ]
+}
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+PATH PARAMETERS
+
+id
+required
+integer
+Example: 59
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+REQUEST BODY SCHEMAapplication/json
+
+email_template_id
+required
+integer or null
+Id of the email template to use. Uses the account's default template if not provided.
+email_address
+required
+string or null
+The sending email address to use. Uses the account's sending email address if not provided.
+content
+required
+string or null
+The HTML content of the email.
+description
+required
+string or null
+public
+required
+boolean or null
+true to publish this broadcast. false to save a draft.
+published_at
+required
+string or null
+The published timestamp to display in ISO8601 format. If no timezone is provided, UTC is assumed.
+send_at
+required
+string or null
+The scheduled send time for this broadcast in ISO8601 format. If no timezone is provided, UTC is assumed.
+thumbnail_alt
+required
+string or null
+thumbnail_url
+required
+string or null
+preview_text
+required
+string or null
+subject
+required
+string or null
+subscriber_filter
+required
+[object] or null
+Filters your subscribers. At this time, we only support using only one filter group type via the API (e.g. all, any, or none but no combinations). If nothing is provided, will default to all of your subscribers.
+» all
+required
+[object] or null
+Filters your subscribers using a logical AND of all provided segment and tag ids, i.e. a subscriber would have to be part of all segments and tags provided
+»» type
+required
+string
+segment or tag
+»» ids
+required
+[integer]
+» any
+required
+[object] or null
+Filters your subscribers using a logical OR of all provided segment and tag ids, i.e. a subscriber would have to be part of at least one of the segments or tags provided
+»» type
+required
+string
+segment or tag
+»» ids
+required
+[string]
+» none
+required
+[object] or null
+Filters your subscribers using a logical NOT of all provided segment and tag ids, i.e. a subscriber would have to be in none of the segments or tags provided
+»» type
+required
+string
+segment or tag
+»» ids
+required
+[string]
+Responses
+
+Example responses
+200 Response
+{
+  "broadcast": {
+    "id": 50,
+    "created_at": "2023-02-17T11:43:55Z",
+    "subject": "Hello!",
+    "preview_text": "Pleased to meet you!",
+    "description": "Intro email",
+    "content": "<p>Let me introduce myself</p>",
+    "public": true,
+    "published_at": "2023-02-17T11:43:55Z",
+    "send_at": "2023-02-17T11:43:55Z",
+    "thumbnail_alt": null,
+    "thumbnail_url": null,
+    "email_address": "greetings@convertkit.dev",
+    "email_template": {
+      "id": 2,
+      "name": "Classic"
+    },
+    "subscriber_filter": [
+      {
+        "all": [
+          {
+            "type": "segment",
+            "ids": [
+              41
+            ]
+          }
+        ]
+      }
+    ],
+    "publication_id": 50
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+403 Response
+{
+  "errors": [
+    "You do not have sufficient permissions to access this resource. Please contact support."
+  ]
+}
+404 Response
+{
+  "errors": [
+    "Not Found"
+  ]
+}
+422 Response
+{
+  "errors": [
+    "Email template not found",
+    "Only a single filter group is supported. Use one of `all`, `any`, or `none`."
+  ]
+}
+200
+Updates the broadcast and returns its details
+401
+Returns a 401 if the token and/or account cannot be authenticated
+403
+Returns a 403 with an error message if the current account is unauthorized to create a broadcast
+404
+Returns a 404 when the provided id does not exist
+422
+Returns a 422 with an error message when one or more of the parameters are invalid or the campaign has already started sending
+Custom Fields
+
+Bulk create custom fields
+
+Code samples
+curl -X POST https://api.kit.com/v4/bulk/custom_fields \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+POST /v4/bulk/custom_fields
+
+See "Bulk & async processing" for more information.
+
+Body parameter
+{
+  "custom_fields": [
+    {
+      "label": "Test Custom Field 0"
+    },
+    {
+      "label": "Test Custom Field 1"
+    },
+    {
+      "label": "Test Custom Field 2"
+    },
+    {
+      "label": "Test Custom Field 3"
+    }
+  ],
+  "callback_url": null
+}
+Parameters
+
+AUTHORIZATIONSOAuth2
+
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+REQUEST BODY SCHEMAapplication/json
+
+custom_fields
+required
+[object]
+» label
+required
+string
+callback_url
+any
+Responses
+
+Example responses
+200 Response
+{
+  "custom_fields": [
+    {
+      "id": 80,
+      "label": "Interests",
+      "key": "interests",
+      "name": "ck_field_80_interests",
+      "created_at": "2023-02-17T11:43:55Z"
+    },
+    {
+      "id": 79,
+      "label": "Last name",
+      "key": "last_name",
+      "name": "ck_field_79_last_name",
+      "created_at": "2023-02-17T11:43:55Z"
+    }
+  ],
+  "failures": [
+    {
+      "custom_field": {
+        "id": 78,
+        "label": "Existing Custom Field",
+        "key": "existing_custom_field",
+        "name": "ck_field_78_existing_custom_field",
+        "created_at": "2023-02-17T11:43:55Z"
+      },
+      "errors": [
+        "Label has already been taken"
+      ]
+    }
+  ]
+}
+202 Response
+{}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+413 Response
+{
+  "errors": [
+    "This request exceeds your queued bulk requests limit. Please wait while we process your existing requests and try again later."
+  ]
+}
+422 Response
+{
+  "errors": [
+    "No custom fields included for processing"
+  ]
+}
+200
+Creates the custom_fields synchronously when 100 or less custom fields are requested
+202
+Creates or updates custom_fields asynchronously when more than 100 custom fields are requested
+401
+Returns a 401 if the token and/or account cannot be authenticated
+413
+Returns a 413 when the size of the request would exceed the account's data limit for enqueued bulk requests
+422
+Returns a 422 when custom_fields is empty or not an array
+List custom fields
+
+Code samples
+curl -X GET https://api.kit.com/v4/custom_fields \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+GET /v4/custom_fields
+
+A custom field allows you to collect subscriber information beyond the standard fields of first name and email address. An example would be a custom field called last name so you can get the full names of your subscribers.
+
+You create a custom field, and then you're able to use that in your forms or emails.
+
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+QUERY PARAMETERS
+
+after
+any
+Example: after=WzFd
+To fetch next page of results, use ?after=<end_cursor>
+before
+any
+Example: before=WzNd
+To fetch previous page of results, use ?before=<start_cursor>
+include_total_count
+string
+Example: include_total_count=false
+To include the total count of records in the response, use true. For large collections, expect a slightly slower response.
+per_page
+any
+Example: per_page=10
+Number of results per page. Default 500, maximum 1000.
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+Responses
+
+Example responses
+200 Response
+{
+  "custom_fields": [
+    {
+      "id": 1,
+      "name": "ck_field_1_last_name",
+      "key": "last_name",
+      "label": "Last name"
+    }
+  ],
+  "pagination": {
+    "has_previous_page": false,
+    "has_next_page": false,
+    "start_cursor": "WzFd",
+    "end_cursor": "WzFd",
+    "per_page": 500
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+200
+Returns a paginated list of all custom fields for your account
+401
+Returns a 401 if the token and/or account cannot be authenticated
+Create a custom field
+
+Code samples
+curl -X POST https://api.kit.com/v4/custom_fields \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+POST /v4/custom_fields
+
+Create a custom field for your account. The label field must be unique to your account. Whitespace will be removed from the beginning and the end of your label.
+
+Additionally, a key field and a name field will be generated for you. The key is an ASCII-only, lowercased, underscored representation of your label. This key must be unique to your account. Keys are used in personalization tags in sequences and broadcasts. Names are unique identifiers for use in the HTML of custom forms. They are made up of a combination of ID and the key of the custom field prefixed with "ck_field".
+
+Body parameter
+{
+  "label": "Interests"
+}
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+REQUEST BODY SCHEMAapplication/json
+
+label
+required
+string
+Responses
+
+Example responses
+201 Response
+{
+  "custom_field": {
+    "id": 6,
+    "name": "ck_field_6_interests",
+    "key": "interests",
+    "label": "Interests"
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+422 Response
+{
+  "errors": [
+    "Label can't be blank"
+  ]
+}
+201
+Creates a new custom field and returns its details
+401
+Returns a 401 if the token and/or account cannot be authenticated
+422
+Returns a 422 with an error message when the label is missing
+Delete custom field
+
+Code samples
+curl -X DELETE https://api.kit.com/v4/custom_fields/{id} \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -H 'Accept: ' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+DELETE /v4/custom_fields/{id}
+
+This will remove all data in this field from your subscribers.
+
+Body parameter
+{}
+
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+PATH PARAMETERS
+
+id
+required
+integer
+Example: 42
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+Responses
+
+Example responses
+204 Response
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+404 Response
+{
+  "errors": [
+    "Not Found"
+  ]
+}
+422 Response
+{
+  "errors": [
+    "Unable to destroy the custom field."
+  ]
+}
+204
+Deletes the custom field
+401
+Returns a 401 if the token and/or account cannot be authenticated
+404
+Returns a 404 when the provided id does not exist
+422
+Returns a 422 when the custom field cannot be deleted
+Update a custom field
+
+Code samples
+curl -X PUT https://api.kit.com/v4/custom_fields/{id} \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+PUT /v4/custom_fields/{id}
+
+Updates a custom field label (see Create a custom field above for more information on labels). Note that the key will change but the name remains the same when the label is updated.
+
+Warning: An update to a custom field will break all of the liquid personalization tags in emails that reference it - e.g. if you update a Zip_Code custom field to Post_Code, all liquid tags referencing {{ subscriber.Zip_Code }} would no longer work and need to be replaced with {{ subscriber.Post_Code }}.
+
+Body parameter
+{
+  "label": "Last name"
+}
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+PATH PARAMETERS
+
+id
+required
+integer
+Example: 24
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+REQUEST BODY SCHEMAapplication/json
+
+label
+required
+string
+Responses
+
+Example responses
+200 Response
+{
+  "custom_field": {
+    "id": 22,
+    "name": "ck_field_22_last_name",
+    "key": "last_name",
+    "label": "Last name"
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+404 Response
+{
+  "errors": [
+    "Not Found"
+  ]
+}
+422 Response
+{
+  "errors": [
+    "Label can't be blank"
+  ]
+}
+200
+Updates the custom field and returns its details
+401
+Returns a 401 if the token and/or account cannot be authenticated
+404
+Returns a 404 when the provided id does not exist
+422
+Returns a 422 with an error mesage when one or more of the parameters are invalid
+Forms
+
+Bulk add subscribers to forms
+
+Code samples
+curl -X POST https://api.kit.com/v4/bulk/forms/subscribers \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+POST /v4/bulk/forms/subscribers
+
+Adding subscribers to double opt-in forms will trigger sending an Incentive Email. Subscribers already added to the specified form will not receive the Incentive Email again. For more information about double opt-in see "Double opt-in".
+
+The subscribers being added to the form must already exist. Subscribers can be created in bulk using the "Bulk create subscriber" endpoint.
+
+See "Bulk & async processing" for more information.
+
+Body parameter
+{
+  "additions": [
+    {
+      "form_id": 0,
+      "subscriber_id": 0
+    },
+    {
+      "form_id": 1,
+      "subscriber_id": 1
+    },
+    {
+      "form_id": 2,
+      "subscriber_id": 2
+    },
+    {
+      "form_id": 3,
+      "subscriber_id": 3
+    }
+  ],
+  "callback_url": null
+}
+Parameters
+
+AUTHORIZATIONSOAuth2
+
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+REQUEST BODY SCHEMAapplication/json
+
+additions
+required
+[object]
+» form_id
+required
+integer
+» subscriber_id
+required
+integer
+» referrer
+string
+callback_url
+any
+Responses
+
+Example responses
+200 Response
+{
+  "subscribers": [
+    {
+      "id": 481,
+      "first_name": "Sub",
+      "email_address": "sub@example.com",
+      "created_at": "2023-02-17T11:43:55Z",
+      "added_at": "2023-02-17T11:43:55Z",
+      "referrer": "https://mywebsite.com/bfpromo/?utm_source=facebook&utm_medium=cpc&utm_campaign=black_friday&utm_term=car_owners&utm_content=get_10_off",
+      "referrer_utm_parameters": {
+        "source": "facebook",
+        "medium": "cpc",
+        "campaign": "black_friday",
+        "term": "car_owners",
+        "content": "get_10_off"
+      }
+    },
+    {
+      "id": 481,
+      "first_name": "Sub",
+      "email_address": "sub@example.com",
+      "created_at": "2023-02-17T11:43:55Z",
+      "added_at": "2023-02-17T11:43:55Z",
+      "referrer": "https://mywebsite.com/bfpromo/?utm_source=facebook&utm_medium=cpc&utm_campaign=black_friday&utm_term=car_owners&utm_content=get_10_off",
+      "referrer_utm_parameters": {
+        "source": "facebook",
+        "medium": "cpc",
+        "campaign": "black_friday",
+        "term": "car_owners",
+        "content": "get_10_off"
+      }
+    }
+  ],
+  "failures": [
+    {
+      "errors": [
+        "Subscriber does not exist"
+      ],
+      "subscription": {
+        "form_id": 112,
+        "subscriber_id": null,
+        "referrer": "https://mywebsite.com/bfpromo/?utm_source=facebook&utm_medium=cpc&utm_campaign=black_friday&utm_term=car_owners&utm_content=get_10_off"
+      }
+    },
+    {
+      "errors": [
+        "Form does not exist"
+      ],
+      "subscription": {
+        "form_id": null,
+        "subscriber_id": 481,
+        "referrer": "https://mywebsite.com/bfpromo/?utm_source=facebook&utm_medium=cpc&utm_campaign=black_friday&utm_term=car_owners&utm_content=get_10_off"
+      }
+    }
+  ]
+}
+202 Response
+{}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+413 Response
+{
+  "errors": [
+    "This request exceeds your queued bulk requests limit. Please wait while we process your existing requests and try again later."
+  ]
+}
+422 Response
+{
+  "errors": [
+    "No additions included for processing"
+  ]
+}
+200
+Adds subscribers to forms synchronously when 100 or less form/subscribers are requested
+202
+Adds subscribers to forms asynchronously when more than 100 form/subscribers are requested
+401
+Returns a 401 if the token and/or account cannot be authenticated
+413
+Returns a 413 when the size of the request would exceed the account's data limit for enqueued bulk requests
+422
+Returns a 422 when additions is empty or not an array
+List forms
+
+Code samples
+curl -X GET https://api.kit.com/v4/forms \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+GET /v4/forms
+
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+QUERY PARAMETERS
+
+after
+any
+Example: after=WzFd
+To fetch next page of results, use ?after=<end_cursor>
+before
+any
+Example: before=WzNd
+To fetch previous page of results, use ?before=<start_cursor>
+include_total_count
+string
+Example: include_total_count=false
+To include the total count of records in the response, use true. For large collections, expect a slightly slower response.
+per_page
+any
+Example: per_page=10
+Number of results per page. Default 500, maximum 1000.
+status
+any
+Filter forms that have this status (active, archived, trashed, or all). Defaults to active.
+type
+any
+Filter forms and landing pages by type. Use embed for embedded forms. Use hosted for landing pages.
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+Responses
+
+Example responses
+200 Response
+{
+  "forms": [
+    {
+      "id": 44,
+      "name": "Sign up",
+      "created_at": "2023-02-17T11:43:55Z",
+      "type": "embed",
+      "format": null,
+      "embed_js": "https://kit-greetings.ck.page/f049e3d9ab/index.js",
+      "embed_url": "https://kit-greetings.ck.page/f049e3d9ab",
+      "archived": false,
+      "uid": "f049e3d9ab"
+    },
+    {
+      "id": 43,
+      "name": "Lead gen",
+      "created_at": "2023-02-17T11:43:55Z",
+      "type": "hosted",
+      "format": null,
+      "embed_js": "https://kit-greetings.ck.page/ae7c1adaa1/index.js",
+      "embed_url": "https://kit-greetings.ck.page/ae7c1adaa1",
+      "archived": false,
+      "uid": "ae7c1adaa1"
+    }
+  ],
+  "pagination": {
+    "has_previous_page": false,
+    "has_next_page": false,
+    "start_cursor": "WzQ0XQ==",
+    "end_cursor": "WzQzXQ==",
+    "per_page": 500
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+200
+Returns a paginated list of all forms and landing pages (embedded and hosted) for your account (including active and archived)
+401
+Returns a 401 if the token and/or account cannot be authenticated
+List subscribers for a form
+
+Code samples
+curl -X GET https://api.kit.com/v4/forms/{form_id}/subscribers \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+GET /v4/forms/{form_id}/subscribers
+
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+PATH PARAMETERS
+
+form_id
+required
+integer
+Example: 138
+QUERY PARAMETERS
+
+added_after
+any
+Example: added_after=2023-02-14T11:43:55Z
+Filter subscribers who have been added to the form after this date (format yyyy-mm-dd)
+added_before
+any
+Example: added_before=2023-02-18T11:43:55Z
+Filter subscribers who have been added to the form before this date (format yyyy-mm-dd)
+after
+any
+before
+any
+created_after
+any
+Example: created_after=2023-01-17T11:43:55Z
+Filter subscribers who have been created after this date (format yyyy-mm-dd)
+created_before
+any
+Example: created_before=2023-02-18T11:43:55Z
+Filter subscribers who have been created before this date (format yyyy-mm-dd)
+include_total_count
+string
+Example: include_total_count=false
+To include the total count of records in the response, use true. For large collections, expect a slightly slower response.
+per_page
+any
+status
+string
+Example: status=all
+Filter subscribers who have this status (active, inactive, bounced, complained, cancelled or all). Defaults to active.
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+Responses
+
+Example responses
+200 Response
+{
+  "subscribers": [
+    {
+      "id": 519,
+      "first_name": null,
+      "email_address": "subscriber301@convertkit.dev",
+      "state": "active",
+      "created_at": "2023-02-17T11:43:55Z",
+      "added_at": "2023-02-17T11:43:55Z",
+      "fields": {
+        "category": "One"
+      },
+      "referrer": "https://mywebsite.com/bfpromo/?utm_source=facebook&utm_medium=cpc&utm_campaign=black_friday&utm_term=car_owners&utm_content=get_10_off",
+      "referrer_utm_parameters": {
+        "source": "facebook",
+        "medium": "cpc",
+        "campaign": "black_friday",
+        "term": "car_owners",
+        "content": "get_10_off"
+      }
+    },
+    {
+      "id": 518,
+      "first_name": null,
+      "email_address": "subscriber300@convertkit.dev",
+      "state": "active",
+      "created_at": "2023-02-17T11:43:55Z",
+      "added_at": "2023-02-17T11:43:55Z",
+      "fields": {
+        "category": null
+      },
+      "referrer": "https://mywebsite.com/bfpromo/?utm_source=facebook&utm_medium=cpc&utm_campaign=black_friday&utm_term=car_owners&utm_content=get_10_off",
+      "referrer_utm_parameters": {
+        "source": "facebook",
+        "medium": "cpc",
+        "campaign": "black_friday",
+        "term": "car_owners",
+        "content": "get_10_off"
+      }
+    },
+    {
+      "id": 517,
+      "first_name": null,
+      "email_address": "subscriber299@convertkit.dev",
+      "state": "active",
+      "created_at": "2023-02-17T11:43:55Z",
+      "added_at": "2023-02-17T11:43:55Z",
+      "fields": {
+        "category": null
+      },
+      "referrer": "https://mywebsite.com/bfpromo/?utm_source=facebook&utm_medium=cpc&utm_campaign=black_friday&utm_term=car_owners&utm_content=get_10_off",
+      "referrer_utm_parameters": {
+        "source": "facebook",
+        "medium": "cpc",
+        "campaign": "black_friday",
+        "term": "car_owners",
+        "content": "get_10_off"
+      }
+    }
+  ],
+  "pagination": {
+    "has_previous_page": false,
+    "has_next_page": false,
+    "start_cursor": "WzUxOV0=",
+    "end_cursor": "WzUxN10=",
+    "per_page": 500
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+404 Response
+{
+  "errors": [
+    "Not Found"
+  ]
+}
+200
+Returns a paginated list of subscribers for the specified form
+401
+Returns a 401 if the token and/or account cannot be authenticated
+404
+Returns a 404 when the provided id does not exist
+Add subscriber to form by email address
+
+Code samples
+curl -X POST https://api.kit.com/v4/forms/{form_id}/subscribers \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+POST /v4/forms/{form_id}/subscribers
+
+The subscriber being added to the form must already exist. Subscribers can be created using the "Create a subscriber" endpoint.
+
+Body parameter
+{
+  "email_address": "alice@convertkit.dev",
+  "referrer": "https://mywebsite.com/bfpromo/?utm_source=facebook&utm_medium=cpc&utm_campaign=black_friday&utm_term=car_owners&utm_content=get_10_off"
+}
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+PATH PARAMETERS
+
+form_id
+required
+integer
+Example: 194
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+REQUEST BODY SCHEMAapplication/json
+
+email_address
+required
+string
+referrer
+string
+Responses
+
+Example responses
+200 Response
+{
+  "subscriber": {
+    "id": 615,
+    "first_name": "Alice",
+    "email_address": "alice@convertkit.dev",
+    "state": "active",
+    "created_at": "2023-02-17T11:43:55Z",
+    "added_at": "2023-02-17T11:43:55Z",
+    "fields": {},
+    "referrer_utm_parameters": {
+      "source": "facebook",
+      "medium": "cpc",
+      "campaign": "black_friday",
+      "term": "car_owners",
+      "content": "get_10_off"
+    },
+    "referrer": "https://mywebsite.com/bfpromo/?utm_source=facebook&utm_medium=cpc&utm_campaign=black_friday&utm_term=car_owners&utm_content=get_10_off"
+  }
+}
+201 Response
+{
+  "subscriber": {
+    "id": 616,
+    "first_name": "Alice",
+    "email_address": "alice@convertkit.dev",
+    "state": "active",
+    "created_at": "2023-02-17T11:43:55Z",
+    "added_at": "2023-02-17T11:43:55Z",
+    "fields": {},
+    "referrer_utm_parameters": {
+      "source": "facebook",
+      "medium": "cpc",
+      "campaign": "black_friday",
+      "term": "car_owners",
+      "content": "get_10_off"
+    },
+    "referrer": "https://mywebsite.com/bfpromo/?utm_source=facebook&utm_medium=cpc&utm_campaign=black_friday&utm_term=car_owners&utm_content=get_10_off"
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+404 Response
+{
+  "errors": [
+    "Not Found"
+  ]
+}
+422 Response
+{
+  "errors": [
+    "Either subscriber id or email address is required to add subscriber to form"
+  ]
+}
+200
+Returns a 200 when the subscriber has already been added to the form
+201
+Adds the subscriber to the form
+401
+Returns a 401 if the token and/or account cannot be authenticated
+404
+Returns a 404 when the provided id does not exist
+422
+Returns a 422 with an error message when missing email address
+Add subscriber to form
+
+Code samples
+curl -X POST https://api.kit.com/v4/forms/{form_id}/subscribers/{id} \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+POST /v4/forms/{form_id}/subscribers/{id}
+
+The subscriber being added to the form must already exist. Subscribers can be created using the "Create a subscriber" endpoint.
+
+Body parameter
+{
+  "referrer": "https://mywebsite.com/bfpromo/?utm_source=facebook&utm_medium=cpc&utm_campaign=black_friday&utm_term=car_owners&utm_content=get_10_off"
+}
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+PATH PARAMETERS
+
+form_id
+required
+integer
+Example: 174
+id
+required
+integer
+Example: 599
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+REQUEST BODY SCHEMAapplication/json
+
+referrer
+required
+string
+Responses
+
+Example responses
+200 Response
+{
+  "subscriber": {
+    "id": 595,
+    "first_name": "Alice",
+    "email_address": "alice@convertkit.dev",
+    "state": "active",
+    "created_at": "2023-02-17T11:43:55Z",
+    "added_at": "2023-02-17T11:43:55Z",
+    "fields": {},
+    "referrer_utm_parameters": {
+      "source": "facebook",
+      "medium": "cpc",
+      "campaign": "black_friday",
+      "term": "car_owners",
+      "content": "get_10_off"
+    },
+    "referrer": "https://mywebsite.com/bfpromo/?utm_source=facebook&utm_medium=cpc&utm_campaign=black_friday&utm_term=car_owners&utm_content=get_10_off"
+  }
+}
+201 Response
+{
+  "subscriber": {
+    "id": 596,
+    "first_name": "Alice",
+    "email_address": "alice@convertkit.dev",
+    "state": "active",
+    "created_at": "2023-02-17T11:43:55Z",
+    "added_at": "2023-02-17T11:43:55Z",
+    "fields": {},
+    "referrer_utm_parameters": {
+      "source": "facebook",
+      "medium": "cpc",
+      "campaign": "black_friday",
+      "term": "car_owners",
+      "content": "get_10_off"
+    },
+    "referrer": "https://mywebsite.com/bfpromo/?utm_source=facebook&utm_medium=cpc&utm_campaign=black_friday&utm_term=car_owners&utm_content=get_10_off"
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+404 Response
+{
+  "errors": [
+    "Not Found"
+  ]
+}
+200
+Returns a 200 when the subscriber has already been added to the form
+201
+Adds the subscriber to the form
+401
+Returns a 401 if the token and/or account cannot be authenticated
+404
+Returns a 404 when the provided id does not exist
+Subscribers
+
+Bulk create subscribers
+
+Code samples
+curl -X POST https://api.kit.com/v4/bulk/subscribers \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+POST /v4/bulk/subscribers
+
+See "Bulk & async processing" for more information.
+
+Body parameter
+{
+  "subscribers": [
+    {
+      "first_name": "Test Subscriber 0",
+      "email_address": "subscriber_0@convertkit.dev"
+    },
+    {
+      "first_name": "Test Subscriber 1",
+      "email_address": "subscriber_1@convertkit.dev"
+    },
+    {
+      "first_name": "Test Subscriber 2",
+      "email_address": "subscriber_2@convertkit.dev"
+    },
+    {
+      "first_name": "Test Subscriber 3",
+      "email_address": "subscriber_3@convertkit.dev"
+    }
+  ],
+  "callback_url": null
+}
+Parameters
+
+AUTHORIZATIONSOAuth2
+
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+REQUEST BODY SCHEMAapplication/json
+
+subscribers
+required
+[object]
+» first_name
+required
+string
+» email_address
+required
+string
+» state
+string
+Create subscriber in this state (active, bounced, cancelled, complained or inactive). Defaults to active.
+callback_url
+any
+Responses
+
+Example responses
+200 Response
+{
+  "subscribers": [
+    {
+      "id": 464,
+      "first_name": null,
+      "email_address": "brooke@convertkit.dev",
+      "state": "active",
+      "created_at": "2023-02-17T11:43:55Z"
+    },
+    {
+      "id": 465,
+      "first_name": "Camille",
+      "email_address": "camille@convertkit.dev",
+      "state": "active",
+      "created_at": "2023-02-17T11:43:55Z"
+    },
+    {
+      "id": 463,
+      "first_name": "Alice",
+      "email_address": "alice@convertkit.dev",
+      "state": "active",
+      "created_at": "2023-02-17T11:43:55Z"
+    }
+  ],
+  "failures": [
+    {
+      "subscriber": {
+        "first_name": "Benito",
+        "email_address": null,
+        "state": "active",
+        "created_at": null
+      },
+      "errors": [
+        "Email address is invalid"
+      ]
+    }
+  ]
+}
+202 Response
+{}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+403 Response
+{
+  "errors": [
+    "This request would exceed your subscriber limit"
+  ]
+}
+413 Response
+{
+  "errors": [
+    "This request exceeds your queued bulk requests limit. Please wait while we process your existing requests and try again later."
+  ]
+}
+422 Response
+{
+  "errors": [
+    "No subscribers included for processing"
+  ]
+}
+200
+Creates or updates the subscribers synchronously when 100 or less subscribers are requested
+202
+Creates or updates subscribers asynchronously when more than 100 subscribers are requested
+401
+Returns a 401 if the token and/or account cannot be authenticated
+403
+Returns a 403 when the number of subscribers in the request would exceed the account's subscriber limit
+413
+Returns a 413 when the size of the request would exceed the account's data limit for enqueued bulk requests
+422
+Returns a 422 when subscribers is empty or not an array
+List subscribers
+
+Code samples
+curl -X GET https://api.kit.com/v4/subscribers \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+GET /v4/subscribers
+
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+QUERY PARAMETERS
+
+after
+any
+Example: after=WzFd
+To fetch next page of results, use ?after=<end_cursor>
+before
+any
+Example: before=WzNd
+To fetch previous page of results, use ?before=<start_cursor>
+created_after
+string
+Example: created_after=2023-01-17T11:43:55Z
+Filter subscribers who have been created after this date (format yyyy-mm-dd)
+created_before
+string
+Example: created_before=2023-02-18T11:43:55Z
+Filter subscribers who have been created before this date (format yyyy-mm-dd)
+email_address
+string
+Example: email_address=alice@convertkit.dev
+Search subscribers by email address. This is an exact match search.
+include_total_count
+string
+Example: include_total_count=false
+To include the total count of records in the response, use true. For large collections, expect a slightly slower response.
+per_page
+any
+Example: per_page=10
+Number of results per page. Default 500, maximum 1000.
+sort_field
+string
+Example: sort_field=cancelled_at
+Field to sort by (id, updated_at, cancelled_at). Defaults to id.
+sort_order
+string
+Example: sort_order=asc
+Sort order for results (asc or desc). Defaults to desc.
+status
+string
+Example: status=bounced
+Filter subscribers who have this status (active, inactive, bounced, complained, cancelled or all). Defaults to active.
+updated_after
+string
+Example: updated_after=2023-01-17T11:43:55Z
+Filter subscribers who have been updated after this date (format yyyy-mm-dd)
+updated_before
+string
+Example: updated_before=2023-02-18T11:43:55Z
+Filter subscribers who have been updated before this date (format yyyy-mm-dd)
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+Responses
+
+Example responses
+200 Response
+{
+  "subscribers": [
+    {
+      "id": 147,
+      "first_name": "Alice",
+      "email_address": "alice@convertkit.dev",
+      "state": "active",
+      "created_at": "2023-01-27T11:43:55Z",
+      "fields": {
+        "category": "One"
+      }
+    }
+  ],
+  "pagination": {
+    "has_previous_page": false,
+    "has_next_page": false,
+    "start_cursor": "WzE0N10=",
+    "end_cursor": "WzE0N10=",
+    "per_page": 500
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+422 Response
+{
+  "errors": [
+    "The status param must be `cancelled` if sort_field is `cancelled_at`"
+  ]
+}
+200
+Returns a list of subscribers matching the sort and filter params, defaulting to active subscribers sorted in descending order by id
+401
+Returns a 401 if the token and/or account cannot be authenticated
+422
+raises an error when sorting on cancelled_at without the cancelled status
+Create a subscriber
+
+Code samples
+curl -X POST https://api.kit.com/v4/subscribers \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+POST /v4/subscribers
+
+Behaves as an upsert. If a subscriber with the provided email address does not exist, it creates one with the specified first name and state. If a subscriber with the provided email address already exists, it updates the first name.
+
+We will ignore custom fields that don't already exist in your account. We will not return an error if you try to add data to a custom field that does not exist. Please use Create a custom field to create custom fields before setting for subscribers.
+
+NOTE: Updating the subscriber state with this endpoint is not supported at this time.
+NOTE: We support creating/updating a maximum of 140 custom fields at a time.
+
+Body parameter
+{
+  "first_name": "Alice",
+  "email_address": "alice@convertkit.dev",
+  "state": "active",
+  "fields": {
+    "Last name": "Lamarr",
+    "Birthday": "Feb 17",
+    "Source": "landing page",
+    "Role": "Software developer",
+    "Company": "Convertkit",
+    "Postal code": "83702",
+    "Website": "convertkit.com",
+    "Social media": "https://www.linkedin.com/company/convertkit",
+    "How did you hear about us?": "Social media",
+    "Interests": "Monetization",
+    "Coupon": ""
+  }
+}
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+REQUEST BODY SCHEMAapplication/json
+
+first_name
+string or null
+email_address
+required
+string
+state
+string or null
+Create subscriber in this state (active, bounced, cancelled, complained or inactive). Defaults to active.
+fields
+object or null
+» Last name
+required
+string
+» Birthday
+required
+string
+» Source
+required
+string
+» Role
+string
+» Company
+string
+» Postal code
+string
+» Website
+string
+» Social media
+string
+» How did you hear about us?
+string
+» Interests
+string
+» Coupon
+string
+Responses
+
+Example responses
+200 Response
+{
+  "subscriber": {
+    "id": 265,
+    "first_name": "Alice",
+    "email_address": "alice@convertkit.dev",
+    "state": "inactive",
+    "created_at": "2023-02-17T11:43:55Z",
+    "fields": {}
+  }
+}
+201 Response
+{
+  "subscriber": {
+    "id": 263,
+    "first_name": "Alice",
+    "email_address": "alice@convertkit.dev",
+    "state": "active",
+    "created_at": "2023-02-17T11:43:55Z",
+    "fields": {}
+  }
+}
+202 Response
+{
+  "subscriber": {
+    "id": 264,
+    "first_name": "Alice",
+    "email_address": "alice@convertkit.dev",
+    "state": "active",
+    "created_at": "2023-02-17T11:43:55Z",
+    "fields": {}
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+422 Response
+{
+  "errors": [
+    "Email address is invalid"
+  ]
+}
+200
+Returns a 200 and updates the subscriber first name when a subscriber with provided email already exists
+201
+Creates a new subscriber
+202
+Returns a 202 and asynchronously adds custom fields for the new subscriber when more than 10 custom fields are included in the request
+401
+Returns a 401 if the token and/or account cannot be authenticated
+422
+Returns a 422 with an error message when one or more of the parameters are invalid
+Get a subscriber
+
+Code samples
+curl -X GET https://api.kit.com/v4/subscribers/{id} \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+GET /v4/subscribers/{id}
+
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+PATH PARAMETERS
+
+id
+required
+integer
+Example: 241
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+Responses
+
+Example responses
+200 Response
+{
+  "subscriber": {
+    "id": 240,
+    "first_name": "Alice",
+    "email_address": "alice@convertkit.dev",
+    "state": "active",
+    "created_at": "2023-02-17T11:43:55Z",
+    "fields": {
+      "category": "One"
+    }
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+404 Response
+{
+  "errors": [
+    "Not Found"
+  ]
+}
+200
+Returns the subscriber details
+401
+Returns a 401 if the token and/or account cannot be authenticated
+404
+Returns a 404 when the provided id does not exist
+Update a subscriber
+
+Code samples
+curl -X PUT https://api.kit.com/v4/subscribers/{id} \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+PUT /v4/subscribers/{id}
+
+We will ignore custom fields that don't already exist in your account. We will not return an error if you try to add data to a custom field that does not exist. Please use Create a custom field to create custom fields before setting for subscribers.
+
+NOTE: We support creating/updating a maximum of 140 custom fields at a time.
+
+Body parameter
+{
+  "first_name": "Alice",
+  "email_address": "alice@convertkit.dev",
+  "fields": {
+    "Last name": "Lamarr",
+    "Birthday": "Feb 17",
+    "Source": "landing page",
+    "Role": "Software developer",
+    "Company": "Convertkit",
+    "Postal code": "83702",
+    "Website": "convertkit.com",
+    "Social media": "https://www.linkedin.com/company/convertkit",
+    "How did you hear about us?": "Social media",
+    "Interests": "Monetization",
+    "Coupon": ""
+  }
+}
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+PATH PARAMETERS
+
+id
+required
+integer
+Example: 288
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+REQUEST BODY SCHEMAapplication/json
+
+first_name
+string or null
+email_address
+required
+string
+fields
+object or null
+» Last name
+required
+string
+» Birthday
+required
+string
+» Source
+required
+string
+» Role
+string
+» Company
+string
+» Postal code
+string
+» Website
+string
+» Social media
+string
+» How did you hear about us?
+string
+» Interests
+string
+» Coupon
+string
+Responses
+
+Example responses
+200 Response
+{
+  "subscriber": {
+    "id": 284,
+    "first_name": "Alice",
+    "email_address": "alice@convertkit.dev",
+    "state": "active",
+    "created_at": "2023-02-17T11:43:55Z",
+    "fields": {}
+  }
+}
+202 Response
+{
+  "subscriber": {
+    "id": 285,
+    "first_name": "Alice",
+    "email_address": "alice@convertkit.dev",
+    "state": "active",
+    "created_at": "2023-02-17T11:43:55Z",
+    "fields": {}
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+404 Response
+{
+  "errors": [
+    "Not Found"
+  ]
+}
+422 Response
+{
+  "errors": [
+    "Email address has already been taken"
+  ]
+}
+200
+Updates the subscriber's email address and first name
+202
+Returns a 202 and asynchronously updates custom fields for the subscriber when more than 10 custom fields are included in the request
+401
+Returns a 401 if the token and/or account cannot be authenticated
+404
+Returns a 404 when the provided id does not exist
+422
+Returns 422 with an error when email address is already in use
+Unsubscribe subscriber
+
+Code samples
+curl -X POST https://api.kit.com/v4/subscribers/{id}/unsubscribe \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: ' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+POST /v4/subscribers/{id}/unsubscribe
+
+Body parameter
+{}
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+PATH PARAMETERS
+
+id
+required
+integer
+Example: 258
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+Responses
+
+Example responses
+204 Response
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+404 Response
+{
+  "errors": [
+    "Not Found"
+  ]
+}
+204
+Unsubscribes the subscriber
+401
+Returns a 401 if the token and/or account cannot be authenticated
+404
+Returns a 404 when the provided id does not exist
+List tags for a subscriber
+
+Code samples
+curl -X GET https://api.kit.com/v4/subscribers/{subscriber_id}/tags \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+GET /v4/subscribers/{subscriber_id}/tags
+
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+PATH PARAMETERS
+
+subscriber_id
+required
+integer
+Example: 848
+QUERY PARAMETERS
+
+after
+any
+before
+any
+include_total_count
+string
+Example: include_total_count=false
+To include the total count of records in the response, use true. For large collections, expect a slightly slower response.
+per_page
+any
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+Responses
+
+Example responses
+200 Response
+{
+  "tags": [
+    {
+      "id": 92,
+      "name": "Tag B",
+      "tagged_at": "2023-02-17T10:43:55Z"
+    },
+    {
+      "id": 93,
+      "name": "Tag A",
+      "tagged_at": "2023-02-17T10:43:55Z"
+    }
+  ],
+  "pagination": {
+    "has_previous_page": false,
+    "has_next_page": false,
+    "start_cursor": "WzZd",
+    "end_cursor": "WzVd",
+    "per_page": 500
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+404 Response
+{
+  "errors": [
+    "Not Found"
+  ]
+}
+200
+Returns a paginated list of all tags for a subscriber
+401
+Returns a 401 if the token and/or account cannot be authenticated
+404
+Returns a 404 when the provided id does not exist
+Tags
+
+Bulk create tags
+
+Code samples
+curl -X POST https://api.kit.com/v4/bulk/tags \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+POST /v4/bulk/tags
+
+See "Bulk & async processing" for more information.
+
+Body parameter
+{
+  "tags": [
+    {
+      "name": "Test Tag 0"
+    },
+    {
+      "name": "Test Tag 1"
+    },
+    {
+      "name": "Test Tag 2"
+    },
+    {
+      "name": "Test Tag 3"
+    }
+  ],
+  "callback_url": null
+}
+Parameters
+
+AUTHORIZATIONSOAuth2
+
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+REQUEST BODY SCHEMAapplication/json
+
+tags
+required
+[object]
+» name
+required
+string
+callback_url
+any
+Responses
+
+Example responses
+200 Response
+{
+  "tags": [
+    {
+      "id": 55,
+      "name": "Existing Tag",
+      "created_at": "2023-02-17T11:43:55Z"
+    },
+    {
+      "id": 56,
+      "name": "Attended Event",
+      "created_at": "2023-02-17T11:43:55Z"
+    },
+    {
+      "id": 57,
+      "name": "Newsletter",
+      "created_at": "2023-02-17T11:43:55Z"
+    },
+    {
+      "id": 58,
+      "name": "Re-engage",
+      "created_at": "2023-02-17T11:43:55Z"
+    }
+  ],
+  "failures": []
+}
+202 Response
+{}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+413 Response
+{
+  "errors": [
+    "This request exceeds your queued bulk requests limit. Please wait while we process your existing requests and try again later."
+  ]
+}
+422 Response
+{
+  "errors": [
+    "No tags included for processing"
+  ]
+}
+200
+Creates or returns existing tags synchronously when 100 or less tags are requested
+202
+Creates or returns existing tags asynchronously when more than 100 tags are requested
+401
+Returns a 401 if the token and/or account cannot be authenticated
+413
+Returns a 413 when the size of the request would exceed the account's data limit for enqueued bulk requests
+422
+Returns a 422 when tags is empty or not an array
+Bulk remove tags from subscribers
+
+Code samples
+curl -X DELETE https://api.kit.com/v4/bulk/tags/subscribers \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+DELETE /v4/bulk/tags/subscribers
+
+See "Bulk & async processing" for more information.
+
+Body parameter
+{
+  "taggings": [
+    {
+      "tag_id": 0,
+      "subscriber_id": 0
+    },
+    {
+      "tag_id": 1,
+      "subscriber_id": 1
+    },
+    {
+      "tag_id": 2,
+      "subscriber_id": 2
+    },
+    {
+      "tag_id": 3,
+      "subscriber_id": 3
+    }
+  ],
+  "callback_url": null
+}
+Parameters
+
+AUTHORIZATIONSOAuth2
+
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+REQUEST BODY SCHEMAapplication/json
+
+taggings
+required
+[object]
+» tag_id
+required
+integer
+» subscriber_id
+required
+integer
+callback_url
+any
+Responses
+
+Example responses
+200 Response
+{
+  "failures": []
+}
+202 Response
+{}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+413 Response
+{
+  "errors": [
+    "This request exceeds your queued bulk requests limit. Please wait while we process your existing requests and try again later."
+  ]
+}
+422 Response
+{
+  "errors": [
+    "No taggings included for processing"
+  ]
+}
+200
+Deletes the taggings synchronously when 100 or less tags/subscribers are provided
+202
+Destroys taggings asynchronously when more than 100 tags/subscribers are provided
+401
+Returns a 401 if the token and/or account cannot be authenticated
+413
+Returns a 413 when the size of the request would exceed the account's data limit for enqueued bulk requests
+422
+Returns a 422 when taggings is empty or not an array
+Bulk tag subscribers
+
+Code samples
+curl -X POST https://api.kit.com/v4/bulk/tags/subscribers \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+POST /v4/bulk/tags/subscribers
+
+The subscribers being tagged must already exist. Subscribers can be created in bulk using the "Bulk create subscriber" endpoint.
+
+See "Bulk & async processing" for more information.
+
+Body parameter
+{
+  "taggings": [
+    {
+      "tag_id": 0,
+      "subscriber_id": 0
+    },
+    {
+      "tag_id": 1,
+      "subscriber_id": 1
+    },
+    {
+      "tag_id": 2,
+      "subscriber_id": 2
+    },
+    {
+      "tag_id": 3,
+      "subscriber_id": 3
+    }
+  ],
+  "callback_url": null
+}
+Parameters
+
+AUTHORIZATIONSOAuth2
+
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+REQUEST BODY SCHEMAapplication/json
+
+taggings
+required
+[object]
+» tag_id
+required
+integer
+» subscriber_id
+required
+integer
+callback_url
+any
+Responses
+
+Example responses
+200 Response
+{
+  "subscribers": [
+    {
+      "id": 496,
+      "first_name": "Sub",
+      "email_address": "sub@example.com",
+      "created_at": "2023-02-17T11:43:55Z",
+      "tagged_at": "2023-02-17T11:43:55Z"
+    },
+    {
+      "id": 496,
+      "first_name": "Sub",
+      "email_address": "sub@example.com",
+      "created_at": "2023-02-17T11:43:55Z",
+      "tagged_at": "2023-02-17T11:43:55Z"
+    }
+  ],
+  "failures": [
+    {
+      "errors": [
+        "Subscriber does not exist"
+      ],
+      "tagging": {
+        "tag_id": 69,
+        "subscriber_id": null
+      }
+    },
+    {
+      "errors": [
+        "Tag does not exist"
+      ],
+      "tagging": {
+        "tag_id": null,
+        "subscriber_id": 496
+      }
+    }
+  ]
+}
+202 Response
+{}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+413 Response
+{
+  "errors": [
+    "This request exceeds your queued bulk requests limit. Please wait while we process your existing requests and try again later."
+  ]
+}
+422 Response
+{
+  "errors": [
+    "No taggings included for processing"
+  ]
+}
+200
+Creates the taggings synchronously when 100 or less tags/subscribers are requested
+202
+Creates or updates taggings asynchronously when more than 100 tags/subscribers are requested
+401
+Returns a 401 if the token and/or account cannot be authenticated
+413
+Returns a 413 when the size of the request would exceed the account's data limit for enqueued bulk requests
+422
+Returns a 422 when taggings is empty or not an array
+List tags
+
+Code samples
+curl -X GET https://api.kit.com/v4/tags \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+GET /v4/tags
+
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+QUERY PARAMETERS
+
+after
+any
+Example: after=WzFd
+To fetch next page of results, use ?after=<end_cursor>
+before
+any
+Example: before=WzNd
+To fetch previous page of results, use ?before=<start_cursor>
+include_total_count
+string
+Example: include_total_count=false
+To include the total count of records in the response, use true. For large collections, expect a slightly slower response.
+per_page
+any
+Example: per_page=10
+Number of results per page. Default 500, maximum 1000.
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+Responses
+
+Example responses
+200 Response
+{
+  "tags": [
+    {
+      "id": 5,
+      "name": "Tag B",
+      "created_at": "2023-02-17T11:43:55Z"
+    },
+    {
+      "id": 4,
+      "name": "Tag A",
+      "created_at": "2023-02-17T11:43:55Z"
+    }
+  ],
+  "pagination": {
+    "has_previous_page": false,
+    "has_next_page": false,
+    "start_cursor": "WzVd",
+    "end_cursor": "WzRd",
+    "per_page": 500
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+200
+Returns a paginated list of all tags for your account
+401
+Returns a 401 if the token and/or account cannot be authenticated
+Create a tag
+
+Code samples
+curl -X POST https://api.kit.com/v4/tags \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+POST /v4/tags
+
+Body parameter
+{
+  "name": "Completed"
+}
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+REQUEST BODY SCHEMAapplication/json
+
+name
+required
+string
+Responses
+
+Example responses
+200 Response
+{
+  "tag": {
+    "id": 12,
+    "name": "Completed",
+    "created_at": "2025-03-18T17:15:52Z"
+  }
+}
+201 Response
+{
+  "tag": {
+    "id": 11,
+    "name": "Completed",
+    "created_at": "2023-02-17T11:43:55Z"
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+422 Response
+{
+  "errors": [
+    "Name can't be blank"
+  ]
+}
+200
+Returns the tag if it already exists
+201
+Creates the tag
+401
+Returns a 401 if the token and/or account cannot be authenticated
+422
+Returns a 422 if a name is not provided
+Update tag name
+
+Code samples
+curl -X PUT https://api.kit.com/v4/tags/{id} \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+PUT /v4/tags/{id}
+
+Body parameter
+{
+  "name": "signed up"
+}
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+PATH PARAMETERS
+
+id
+required
+integer
+Example: 30
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+REQUEST BODY SCHEMAapplication/json
+
+name
+required
+string
+Responses
+
+Example responses
+200 Response
+{
+  "tag": {
+    "id": 28,
+    "name": "signed up",
+    "created_at": "2025-03-18T17:15:54Z"
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+404 Response
+{
+  "errors": [
+    "Not Found"
+  ]
+}
+422 Response
+{
+  "errors": [
+    "Name can't be blank"
+  ]
+}
+200
+Updates the tag name
+401
+Returns a 401 if the token and/or account cannot be authenticated
+404
+Returns a 404 when the provided id does not exist
+422
+Returns a 422 with an error message when name is invalid
+Remove tag from subscriber by email address
+
+Code samples
+curl -X DELETE https://api.kit.com/v4/tags/{tag_id}/subscribers \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -H 'Accept: ' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+DELETE /v4/tags/{tag_id}/subscribers
+
+Body parameter
+email_address: alice@convertkit.dev
+
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+PATH PARAMETERS
+
+tag_id
+required
+integer
+Example: 212
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+REQUEST BODY SCHEMAapplication/json
+
+email_address
+required
+string
+Responses
+
+Example responses
+204 Response
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+404 Response
+{
+  "errors": [
+    "Not Found"
+  ]
+}
+422 Response
+{
+  "errors": [
+    "Either subscriber id or email address is required to remove tag from subscriber"
+  ]
+}
+204
+Removes the tag from the subscriber
+401
+Returns a 401 if the token and/or account cannot be authenticated
+404
+Returns a 404 when the provided id does not exist
+422
+Returns a 422 with an error message when missing email address
+List subscribers for a tag
+
+Code samples
+curl -X GET https://api.kit.com/v4/tags/{tag_id}/subscribers \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+GET /v4/tags/{tag_id}/subscribers
+
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+PATH PARAMETERS
+
+tag_id
+required
+integer
+Example: 118
+QUERY PARAMETERS
+
+after
+any
+Example: after=WzFd
+To fetch next page of results, use ?after=<end_cursor>
+before
+any
+Example: before=WzNd
+To fetch previous page of results, use ?before=<start_cursor>
+created_after
+any
+Example: created_after=2023-01-17T11:43:55Z
+Filter subscribers who have been created after this date (format yyyy-mm-dd)
+created_before
+any
+Example: created_before=2023-02-18T11:43:55Z
+Filter subscribers who have been created before this date (format yyyy-mm-dd)
+include_total_count
+string
+Example: include_total_count=false
+To include the total count of records in the response, use true. For large collections, expect a slightly slower response.
+per_page
+any
+Example: per_page=10
+Number of results per page. Default 500, maximum 1000.
+status
+string
+Example: status=all
+Filter subscribers who have this status (active, inactive, bounced, complained, cancelled or all). Defaults to active.
+tagged_after
+any
+Example: tagged_after=2023-02-14T11:43:55Z
+Filter subscribers who have been tagged after this date (format yyyy-mm-dd)
+tagged_before
+any
+Example: tagged_before=2023-02-18T11:43:55Z
+Filter subscribers who have been tagged before this date (format yyyy-mm-dd)
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+Responses
+
+Example responses
+200 Response
+{
+  "subscribers": [
+    {
+      "id": 851,
+      "first_name": null,
+      "email_address": "subscriber491@convertkit.dev",
+      "state": "active",
+      "created_at": "2023-02-17T11:43:55Z",
+      "tagged_at": "2023-02-17T11:43:55Z",
+      "fields": {
+        "category": "One"
+      }
+    },
+    {
+      "id": 850,
+      "first_name": null,
+      "email_address": "subscriber490@convertkit.dev",
+      "state": "active",
+      "created_at": "2023-02-17T11:43:55Z",
+      "tagged_at": "2023-02-17T11:43:55Z",
+      "fields": {
+        "category": null
+      }
+    },
+    {
+      "id": 849,
+      "first_name": null,
+      "email_address": "subscriber489@convertkit.dev",
+      "state": "active",
+      "created_at": "2023-02-17T11:43:55Z",
+      "tagged_at": "2023-02-17T11:43:55Z",
+      "fields": {
+        "category": null
+      }
+    }
+  ],
+  "pagination": {
+    "has_previous_page": false,
+    "has_next_page": false,
+    "start_cursor": "WyIyMDIzLTAyLTE3VDExOjQzOjU1LjAwMFoiLDExXQ==",
+    "end_cursor": "WyIyMDIzLTAyLTE3VDExOjQzOjU1LjAwMFoiLDld",
+    "per_page": 500
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+404 Response
+{
+  "errors": [
+    "Not Found"
+  ]
+}
+200
+Returns a paginated list of subscribers for the specified tag
+401
+Returns a 401 if the token and/or account cannot be authenticated
+404
+Returns a 404 when the provided id does not exist
+Tag a subscriber by email address
+
+Code samples
+curl -X POST https://api.kit.com/v4/tags/{tag_id}/subscribers \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+POST /v4/tags/{tag_id}/subscribers
+
+The subscriber being tagged must already exist. Subscribers can be created using the "Create a subscriber" endpoint.
+
+Body parameter
+{
+  "email_address": "alice@convertkit.dev"
+}
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+PATH PARAMETERS
+
+tag_id
+required
+integer
+Example: 173
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+REQUEST BODY SCHEMAapplication/json
+
+email_address
+required
+string
+Responses
+
+Example responses
+200 Response
+{
+  "subscriber": {
+    "id": 945,
+    "first_name": "Alice",
+    "email_address": "alice@convertkit.dev",
+    "state": "active",
+    "created_at": "2023-02-17T11:43:55Z",
+    "tagged_at": "2023-02-17T11:43:55Z",
+    "fields": {}
+  }
+}
+201 Response
+{
+  "subscriber": {
+    "id": 946,
+    "first_name": "Alice",
+    "email_address": "alice@convertkit.dev",
+    "state": "active",
+    "created_at": "2023-02-17T11:43:55Z",
+    "tagged_at": "2023-02-17T11:43:55Z",
+    "fields": {}
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+404 Response
+{
+  "errors": [
+    "Not Found"
+  ]
+}
+422 Response
+{
+  "errors": [
+    "Either subscriber id or email address is required to tag subscriber"
+  ]
+}
+200
+Returns a 200 when the subscriber already has the tag
+201
+Tags the subscriber
+401
+Returns a 401 if the token and/or account cannot be authenticated
+404
+Returns a 404 when the provided id does not exist
+422
+Returns a 422 with an error message when missing email address
+Remove tag from subscriber
+
+Code samples
+curl -X DELETE https://api.kit.com/v4/tags/{tag_id}/subscribers/{id} \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -H 'Accept: ' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+DELETE /v4/tags/{tag_id}/subscribers/{id}
+
+Body parameter
+{}
+
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+PATH PARAMETERS
+
+id
+required
+integer
+Example: 968
+tag_id
+required
+integer
+Example: 192
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+Responses
+
+Example responses
+204 Response
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+404 Response
+{
+  "errors": [
+    "Not Found"
+  ]
+}
+204
+Removes the tag from the subscriber
+401
+Returns a 401 if the token and/or account cannot be authenticated
+404
+Returns a 404 when the provided id does not exist
+Tag a subscriber
+
+Code samples
+curl -X POST https://api.kit.com/v4/tags/{tag_id}/subscribers/{id} \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+POST /v4/tags/{tag_id}/subscribers/{id}
+
+The subscriber being tagged must already exist. Subscribers can be created using the "Create a subscriber" endpoint.
+
+Body parameter
+{}
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+PATH PARAMETERS
+
+id
+required
+integer
+Example: 929
+tag_id
+required
+integer
+Example: 152
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+Responses
+
+Example responses
+200 Response
+{
+  "subscriber": {
+    "id": 927,
+    "first_name": "Alice",
+    "email_address": "alice@convertkit.dev",
+    "state": "active",
+    "created_at": "2023-02-17T11:43:55Z",
+    "tagged_at": "2023-02-17T11:43:55Z",
+    "fields": {}
+  }
+}
+201 Response
+{
+  "subscriber": {
+    "id": 928,
+    "first_name": "Alice",
+    "email_address": "alice@convertkit.dev",
+    "state": "active",
+    "created_at": "2023-02-17T11:43:55Z",
+    "tagged_at": "2023-02-17T11:43:55Z",
+    "fields": {}
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+404 Response
+{
+  "errors": [
+    "Not Found"
+  ]
+}
+200
+Returns a 200 when the subscriber already has the tag
+201
+Tags the subscriber
+401
+Returns a 401 if the token and/or account cannot be authenticated
+404
+Returns a 404 when the provided id does not exist
+Email Templates
+
+List email templates
+
+Code samples
+curl -X GET https://api.kit.com/v4/email_templates \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+GET /v4/email_templates
+
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+QUERY PARAMETERS
+
+after
+any
+before
+any
+include_total_count
+string
+Example: include_total_count=false
+To include the total count of records in the response, use true. For large collections, expect a slightly slower response.
+per_page
+any
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+Responses
+
+Example responses
+200 Response
+{
+  "pagination": {
+    "has_previous_page": false,
+    "has_next_page": false,
+    "start_cursor": "Wzld",
+    "end_cursor": "WzFd",
+    "per_page": 500
+  },
+  "email_templates": [
+    {
+      "id": 9,
+      "name": "Custom HTML Template",
+      "is_default": false,
+      "category": "HTML"
+    },
+    {
+      "id": 8,
+      "name": "Story",
+      "is_default": false,
+      "category": "Starting point"
+    },
+    {
+      "id": 6,
+      "name": "Text Only",
+      "is_default": true,
+      "category": "HTML"
+    },
+    {
+      "id": 4,
+      "name": "Modern",
+      "is_default": false,
+      "category": "HTML"
+    },
+    {
+      "id": 2,
+      "name": "Classic",
+      "is_default": false,
+      "category": "HTML"
+    },
+    {
+      "id": 1,
+      "name": "Card",
+      "is_default": false,
+      "category": "HTML"
+    }
+  ]
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+200
+Returns a paginated list of all email templates for your account
+401
+Returns a 401 if the token and/or account cannot be authenticated
+Purchases
+
+List purchases
+
+Code samples
+curl -X GET https://api.kit.com/v4/purchases \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+GET /v4/purchases
+
+Parameters
+
+AUTHORIZATIONSOAuth2
+
+QUERY PARAMETERS
+
+after
+any
+Example: after=WzFd
+To fetch next page of results, use ?after=<end_cursor>
+before
+any
+Example: before=WzNd
+To fetch previous page of results, use ?before=<start_cursor>
+include_total_count
+string
+Example: include_total_count=false
+To include the total count of records in the response, use true. For large collections, expect a slightly slower response.
+per_page
+any
+Example: per_page=10
+Number of results per page. Default 500, maximum 1000.
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+Responses
+
+Example responses
+200 Response
+{
+  "purchases": [
+    {
+      "id": 3,
+      "transaction_id": "512-41-4101",
+      "status": "paid",
+      "email_address": "pru.magoo@convertkit.dev",
+      "currency": "USD",
+      "transaction_time": "2023-02-17T11:43:55Z",
+      "subtotal": 5,
+      "discount": 0,
+      "tax": 0,
+      "total": 5,
+      "products": [
+        {
+          "quantity": 1,
+          "lid": "000-13-0000",
+          "unit_price": 0.05,
+          "sku": null,
+          "name": "Tip",
+          "pid": "111-75-7524"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "transaction_id": "323-79-5320",
+      "status": "paid",
+      "email_address": "pru.magoo@convertkit.dev",
+      "currency": "USD",
+      "transaction_time": "2023-02-17T11:43:55Z",
+      "subtotal": 10,
+      "discount": 0,
+      "tax": 1.05,
+      "total": 11.05,
+      "products": [
+        {
+          "quantity": 1,
+          "lid": "000-12-0000",
+          "unit_price": 0.1,
+          "sku": null,
+          "name": "Monthly Game Review",
+          "pid": "000-11-0000"
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "transaction_id": "796-92-4892",
+      "status": "paid",
+      "email_address": "pru.magoo@convertkit.dev",
+      "currency": "USD",
+      "transaction_time": "2023-02-17T11:43:55Z",
+      "subtotal": 78.66,
+      "discount": 5,
+      "tax": 7.87,
+      "total": 81.53,
+      "products": [
+        {
+          "quantity": 1,
+          "lid": "811-75-7900",
+          "unit_price": 23.22,
+          "sku": null,
+          "name": "Phantom Hourglass",
+          "pid": "804-02-4430"
+        },
+        {
+          "quantity": 1,
+          "lid": "766-49-1241",
+          "unit_price": 32.22,
+          "sku": null,
+          "name": "Twilight Princess",
+          "pid": "833-51-1151"
+        }
+      ]
+    }
+  ],
+  "pagination": {
+    "has_previous_page": false,
+    "has_next_page": false,
+    "start_cursor": "WzNd",
+    "end_cursor": "WzFd",
+    "per_page": 500
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+200
+Returns a paginated list of all purchases for your account
+401
+Returns a 401 if the token and/or account cannot be authenticated
+Create a purchase
+
+Code samples
+curl -X POST https://api.kit.com/v4/purchases \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+POST /v4/purchases
+
+Body parameter
+{
+  "purchase": {
+    "email_address": "pru.magoo@convertkit.dev",
+    "transaction_id": "796-92-4892",
+    "status": "paid",
+    "subtotal": 78.66,
+    "tax": 7.87,
+    "shipping": 0,
+    "discount": 5,
+    "total": 81.53,
+    "currency": "USD",
+    "transaction_time": "2023-02-17T11:43:55Z",
+    "products": [
+      {
+        "name": "Phantom Hourglass",
+        "pid": "804-02-4430",
+        "lid": "811-75-7900",
+        "quantity": 1,
+        "unit_price": 23.22,
+        "sku": "SM21-SH-M02-RD-S-001"
+      },
+      {
+        "name": "Twilight Princess",
+        "pid": "833-51-1151",
+        "lid": "766-49-1241",
+        "quantity": 1,
+        "unit_price": 32.22,
+        "sku": "WT21-JK-M03-BK-L-012"
+      },
+      {
+        "name": "Four Swords",
+        "pid": "217-99-4325",
+        "lid": "563-95-8878",
+        "quantity": 1,
+        "unit_price": 23.22,
+        "sku": "FL21-TS-M01-BL-M-020"
+      }
+    ]
+  }
+}
+Parameters
+
+AUTHORIZATIONSOAuth2
+
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+REQUEST BODY SCHEMAapplication/json
+
+purchase
+required
+object
+» email_address
+required
+string
+The subscriber that the purchase belongs to
+» first_name
+string or null
+The first name of the subscriber
+» transaction_id
+required
+string
+A unique ID for the purchase
+» status
+string or null
+We currently support a status of paid
+» subtotal
+number(float) or null
+» tax
+number(float) or null
+» shipping
+integer or null
+» discount
+number(float) or null
+» total
+number(float) or null
+» currency
+required
+string
+3 letter currency code (e.g. USD)
+» transaction_time
+string or null
+» products
+required
+[object]
+Array of purchased products
+»» name
+required
+string
+Product name
+»» pid
+required
+string
+This is your identifier for a product. Each product provided in the products array must have a unique pid. Variants of the same product should have the same pid.
+»» lid
+required
+string
+Each product should have a unique lid (i.e., line item identifier) for this purchase.
+»» quantity
+required
+integer
+Product quantity
+»» sku
+string or null
+Product sku
+»» unit_price
+required
+number(float)
+Product price
+Responses
+
+Example responses
+201 Response
+{
+  "purchase": {
+    "id": 19,
+    "transaction_id": "796-92-4892",
+    "status": "paid",
+    "email_address": "pru.magoo@convertkit.dev",
+    "currency": "USD",
+    "transaction_time": "2023-02-17T11:43:55Z",
+    "subtotal": 78.66,
+    "discount": 5,
+    "tax": 7.87,
+    "total": 81.53,
+    "products": [
+      {
+        "quantity": 1,
+        "lid": "811-75-7900",
+        "unit_price": 23.22,
+        "sku": "SM21-SH-M02-RD-S-001",
+        "name": "Phantom Hourglass",
+        "pid": "804-02-4430"
+      },
+      {
+        "quantity": 1,
+        "lid": "766-49-1241",
+        "unit_price": 32.22,
+        "sku": "WT21-JK-M03-BK-L-012",
+        "name": "Twilight Princess",
+        "pid": "833-51-1151"
+      },
+      {
+        "quantity": 1,
+        "lid": "563-95-8878",
+        "unit_price": 23.22,
+        "sku": "FL21-TS-M01-BL-M-020",
+        "name": "Four Swords",
+        "pid": "217-99-4325"
+      }
+    ]
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+422 Response
+{
+  "errors": [
+    "Transaction cannot be blank"
+  ]
+}
+201
+Creates a purchase for the provided subscriber and returns its details. It also creates products if they don't exist.
+401
+Returns a 401 if the token and/or account cannot be authenticated
+422
+Returns a 422 when one or more of the parameters are invalid
+Get a purchase
+
+Code samples
+curl -X GET https://api.kit.com/v4/purchases/{id} \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+GET /v4/purchases/{id}
+
+Parameters
+
+AUTHORIZATIONSOAuth2
+
+PATH PARAMETERS
+
+id
+required
+integer
+Example: 14
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+Responses
+
+Example responses
+200 Response
+{
+  "purchase": {
+    "id": 13,
+    "transaction_id": "796-92-4892",
+    "status": "paid",
+    "email_address": "pru.magoo@convertkit.dev",
+    "currency": "USD",
+    "transaction_time": "2023-02-17T11:43:55Z",
+    "subtotal": 78.66,
+    "discount": 5,
+    "tax": 7.87,
+    "total": 81.53,
+    "products": [
+      {
+        "quantity": 1,
+        "lid": "811-75-7900",
+        "unit_price": 23.22,
+        "sku": null,
+        "name": "Phantom Hourglass",
+        "pid": "804-02-4430"
+      },
+      {
+        "quantity": 1,
+        "lid": "766-49-1241",
+        "unit_price": 32.22,
+        "sku": null,
+        "name": "Twilight Princess",
+        "pid": "833-51-1151"
+      }
+    ]
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+404 Response
+{
+  "errors": [
+    "Not Found"
+  ]
+}
+200
+Returns the purchase details
+401
+Returns a 401 if the token and/or account cannot be authenticated
+404
+Returns a 404 when the provided id does not exist
+Segments
+
+List segments
+
+Code samples
+curl -X GET https://api.kit.com/v4/segments \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+GET /v4/segments
+
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+QUERY PARAMETERS
+
+after
+any
+before
+any
+include_total_count
+string
+Example: include_total_count=false
+To include the total count of records in the response, use true. For large collections, expect a slightly slower response.
+per_page
+any
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+Responses
+
+Example responses
+200 Response
+{
+  "segments": [
+    {
+      "id": 56,
+      "name": "Segment B",
+      "created_at": "2023-02-17T11:43:55Z"
+    },
+    {
+      "id": 55,
+      "name": "Segment A",
+      "created_at": "2023-02-17T11:43:55Z"
+    }
+  ],
+  "pagination": {
+    "has_previous_page": false,
+    "has_next_page": false,
+    "start_cursor": "WzU2XQ==",
+    "end_cursor": "WzU1XQ==",
+    "per_page": 500
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+200
+Returns a paginated list of all segments for your account
+401
+Returns a 401 if the token and/or account cannot be authenticated
+Sequences
+
+List sequences
+
+Code samples
+curl -X GET https://api.kit.com/v4/sequences \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+GET /v4/sequences
+
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+QUERY PARAMETERS
+
+after
+any
+Example: after=WzFd
+To fetch next page of results, use ?after=<end_cursor>
+before
+any
+Example: before=WzNd
+To fetch previous page of results, use ?before=<start_cursor>
+include_total_count
+string
+Example: include_total_count=false
+To include the total count of records in the response, use true. For large collections, expect a slightly slower response.
+per_page
+any
+Example: per_page=10
+Number of results per page. Default 500, maximum 1000.
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+Responses
+
+Example responses
+200 Response
+{
+  "sequences": [
+    {
+      "id": 3,
+      "name": "Evergreen sequence",
+      "hold": false,
+      "repeat": false,
+      "created_at": "2023-02-17T11:43:55Z"
+    }
+  ],
+  "pagination": {
+    "has_previous_page": false,
+    "has_next_page": false,
+    "start_cursor": "WzNd",
+    "end_cursor": "WzNd",
+    "per_page": 500
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+200
+Returns a paginated list of all sequences for your account
+401
+Returns a 401 if the token and/or account cannot be authenticated
+List subscribers for a sequence
+
+Code samples
+curl -X GET https://api.kit.com/v4/sequences/{sequence_id}/subscribers \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+GET /v4/sequences/{sequence_id}/subscribers
+
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+PATH PARAMETERS
+
+sequence_id
+required
+integer
+Example: 26
+QUERY PARAMETERS
+
+added_after
+any
+Example: added_after=2023-02-14T11:43:55Z
+Filter subscribers who have been added to the sequence after this date (format yyyy-mm-dd)
+added_before
+any
+Example: added_before=2023-02-18T11:43:55Z
+Filter subscribers who have been added to the sequence before this date (format yyyy-mm-dd)
+after
+any
+before
+any
+created_after
+any
+Example: created_after=2023-01-17T11:43:55Z
+Filter subscribers who have been created after this date (format yyyy-mm-dd)
+created_before
+any
+Example: created_before=2023-02-18T11:43:55Z
+Filter subscribers who have been created before this date (format yyyy-mm-dd)
+include_total_count
+string
+Example: include_total_count=false
+To include the total count of records in the response, use true. For large collections, expect a slightly slower response.
+per_page
+any
+status
+string
+Example: status=all
+Filter subscribers who have this status (active, inactive, bounced, complained, cancelled or all). Defaults to active.
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+Responses
+
+Example responses
+200 Response
+{
+  "subscribers": [
+    {
+      "id": 724,
+      "first_name": null,
+      "email_address": "subscriber427@convertkit.dev",
+      "state": "active",
+      "created_at": "2023-02-17T11:43:55Z",
+      "added_at": "2023-02-17T11:43:55Z",
+      "fields": {
+        "category": "One"
+      }
+    },
+    {
+      "id": 723,
+      "first_name": null,
+      "email_address": "subscriber426@convertkit.dev",
+      "state": "active",
+      "created_at": "2023-02-17T11:43:55Z",
+      "added_at": "2023-02-17T11:43:55Z",
+      "fields": {
+        "category": null
+      }
+    },
+    {
+      "id": 722,
+      "first_name": null,
+      "email_address": "subscriber425@convertkit.dev",
+      "state": "active",
+      "created_at": "2023-02-17T11:43:55Z",
+      "added_at": "2023-02-17T11:43:55Z",
+      "fields": {
+        "category": null
+      }
+    }
+  ],
+  "pagination": {
+    "has_previous_page": false,
+    "has_next_page": false,
+    "start_cursor": "WzcyNF0=",
+    "end_cursor": "WzcyMl0=",
+    "per_page": 500
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+404 Response
+{
+  "errors": [
+    "Not Found"
+  ]
+}
+200
+Returns a paginated list of subscribers for the specified sequence
+401
+Returns a 401 if the token and/or account cannot be authenticated
+404
+Returns a 404 when the provided id does not exist
+Add subscriber to sequence by email address
+
+Code samples
+curl -X POST https://api.kit.com/v4/sequences/{sequence_id}/subscribers \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+POST /v4/sequences/{sequence_id}/subscribers
+
+The subscriber being added to the sequence must already exist. Subscribers can be created using the "Create a subscriber" endpoint.
+
+Body parameter
+{
+  "email_address": "alice@convertkit.dev"
+}
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+PATH PARAMETERS
+
+sequence_id
+required
+integer
+Example: 83
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+REQUEST BODY SCHEMAapplication/json
+
+email_address
+required
+string
+Responses
+
+Example responses
+200 Response
+{
+  "subscriber": {
+    "id": 820,
+    "first_name": "Alice",
+    "email_address": "alice@convertkit.dev",
+    "state": "active",
+    "created_at": "2023-02-17T11:43:55Z",
+    "added_at": "2023-02-17T11:43:55Z",
+    "fields": {}
+  }
+}
+201 Response
+{
+  "subscriber": {
+    "id": 821,
+    "first_name": "Alice",
+    "email_address": "alice@convertkit.dev",
+    "state": "active",
+    "created_at": "2023-02-17T11:43:55Z",
+    "added_at": "2023-02-17T11:43:55Z",
+    "fields": {}
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+404 Response
+{
+  "errors": [
+    "Not Found"
+  ]
+}
+422 Response
+{
+  "errors": [
+    "Sequence is inactive"
+  ]
+}
+200
+Returns a 200 when the subscriber has already been added to the sequence
+201
+Adds the subscriber to the sequence
+401
+Returns a 401 if the token and/or account cannot be authenticated
+404
+Returns a 404 when the provided id does not exist
+422
+Returns a 422 with an error message when a sequence is inactive
+Add subscriber to sequence
+
+Code samples
+curl -X POST https://api.kit.com/v4/sequences/{sequence_id}/subscribers/{id} \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+POST /v4/sequences/{sequence_id}/subscribers/{id}
+
+The subscriber being added to the sequence must already exist. Subscribers can be created using the "Create a subscriber" endpoint.
+
+Body parameter
+{}
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+PATH PARAMETERS
+
+id
+required
+integer
+Example: 804
+sequence_id
+required
+integer
+Example: 62
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+Responses
+
+Example responses
+200 Response
+{
+  "subscriber": {
+    "id": 800,
+    "first_name": "Alice",
+    "email_address": "alice@convertkit.dev",
+    "state": "active",
+    "created_at": "2023-02-17T11:43:55Z",
+    "added_at": "2023-02-17T11:43:55Z",
+    "fields": {}
+  }
+}
+201 Response
+{
+  "subscriber": {
+    "id": 801,
+    "first_name": "Alice",
+    "email_address": "alice@convertkit.dev",
+    "state": "active",
+    "created_at": "2023-02-17T11:43:55Z",
+    "added_at": "2023-02-17T11:43:55Z",
+    "fields": {}
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+404 Response
+{
+  "errors": [
+    "Not Found"
+  ]
+}
+200
+Returns a 200 when the subscriber has already been added to the sequence
+201
+Adds the subscriber to the sequence
+401
+Returns a 401 if the token and/or account cannot be authenticated
+404
+Returns a 404 when the provided id does not exist
+Webhooks
+
+List webhooks
+
+Code samples
+curl -X GET https://api.kit.com/v4/webhooks \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+GET /v4/webhooks
+
+Webhooks are automations that will receive subscriber data when a subscriber event is triggered, such as when a subscriber completes a sequence.
+
+When a webhook is triggered, a POST request will be made to your URL with a JSON payload.
+
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+QUERY PARAMETERS
+
+after
+any
+Example: after=WzFd
+To fetch next page of results, use ?after=<end_cursor>
+before
+any
+Example: before=WzNd
+To fetch previous page of results, use ?before=<start_cursor>
+include_total_count
+string
+Example: include_total_count=false
+To include the total count of records in the response, use true. For large collections, expect a slightly slower response.
+per_page
+any
+Example: per_page=10
+Number of results per page. Default 500, maximum 1000.
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+Responses
+
+Example responses
+200 Response
+{
+  "webhooks": [
+    {
+      "id": 2,
+      "account_id": 1040,
+      "event": {
+        "name": "tag_add",
+        "tag_id": 34
+      },
+      "target_url": "http://example.convertkit.dev/tags"
+    },
+    {
+      "id": 1,
+      "account_id": 1040,
+      "event": {
+        "name": "form_subscribe",
+        "form_id": 10
+      },
+      "target_url": "http://example.convertkit.dev/"
+    }
+  ],
+  "pagination": {
+    "has_previous_page": false,
+    "has_next_page": false,
+    "start_cursor": "WzJd",
+    "end_cursor": "WzFd",
+    "per_page": 500
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+200
+Returns a paginated list of webhooks
+401
+Returns a 401 if the token and/or account cannot be authenticated
+Create a webhook
+
+Code samples
+curl -X POST https://api.kit.com/v4/webhooks \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+POST /v4/webhooks
+
+Available event types:
+- subscriber.subscriber_activate
+- subscriber.subscriber_unsubscribe
+- subscriber.subscriber_bounce
+- subscriber.subscriber_complain
+- subscriber.form_subscribe, required parameter form_id [Integer]
+- subscriber.course_subscribe, required parameter sequence_id [Integer]
+- subscriber.course_complete, required parameter sequence_id [Integer]
+- subscriber.link_click, required parameter initiator_value [String] as a link URL
+- subscriber.product_purchase, required parameter product_id [Integer]
+- subscriber.tag_add, required parameter tag_id [Integer]
+- subscriber.tag_remove, required parameter tag_id [Integer]
+- purchase.purchase_create
+
+Body parameter
+{
+  "target_url": "https://example.convertkit.dev/",
+  "event": {
+    "name": "subscriber.subscriber_activate",
+    "form_id": null,
+    "tag_id": null,
+    "product_id": null,
+    "initiator_value": null,
+    "sequence_id": null
+  }
+}
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+REQUEST BODY SCHEMAapplication/json
+
+target_url
+required
+string
+event
+required
+object
+» name
+required
+string
+The event type. Must be one of the available event types listed above.
+» form_id
+any
+» tag_id
+any
+» product_id
+any
+» initiator_value
+any
+» sequence_id
+any
+Responses
+
+Example responses
+201 Response
+{
+  "webhook": {
+    "id": 9,
+    "account_id": 1065,
+    "event": {
+      "name": "subscriber_activate",
+      "initiator_value": null
+    },
+    "target_url": "https://example.convertkit.dev/"
+  }
+}
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+422 Response
+{
+  "errors": [
+    "`event` and `target` parameters must be provided"
+  ]
+}
+201
+Creates the webhook
+401
+Returns a 401 if the token and/or account cannot be authenticated
+422
+Returns an error when missing required params
+Delete a webhook
+
+Code samples
+curl -X DELETE https://api.kit.com/v4/webhooks/{id} \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  -H 'Accept: ' \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN_HERE'
+
+DELETE /v4/webhooks/{id}
+
+Body parameter
+{}
+
+Parameters
+
+AUTHORIZATIONSOAuth2, API Key
+
+PATH PARAMETERS
+
+id
+required
+integer
+Example: 28
+HEADER PARAMETERS
+
+Authorization
+required
+string
+Example: Bearer YOUR_ACCESS_TOKEN_HERE
+Responses
+
+Example responses
+204 Response
+401 Response
+{
+  "errors": [
+    "The access token is invalid"
+  ]
+}
+404 Response
+{
+  "errors": [
+    "Not Found"
+  ]
+}
