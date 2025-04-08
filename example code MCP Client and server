@@ -1,0 +1,562 @@
+Get Started
+Example Servers
+A list of example servers and implementations
+This page showcases various Model Context Protocol (MCP) servers that demonstrate the protocol’s capabilities and versatility. These servers enable Large Language Models (LLMs) to securely access tools and data sources.
+
+​
+Reference implementations
+
+These official reference servers demonstrate core MCP features and SDK usage:
+
+​
+Data and file systems
+
+Filesystem - Secure file operations with configurable access controls
+PostgreSQL - Read-only database access with schema inspection capabilities
+SQLite - Database interaction and business intelligence features
+Google Drive - File access and search capabilities for Google Drive
+​
+Development tools
+
+Git - Tools to read, search, and manipulate Git repositories
+GitHub - Repository management, file operations, and GitHub API integration
+GitLab - GitLab API integration enabling project management
+Sentry - Retrieving and analyzing issues from Sentry.io
+​
+Web and browser automation
+
+Brave Search - Web and local search using Brave’s Search API
+Fetch - Web content fetching and conversion optimized for LLM usage
+Puppeteer - Browser automation and web scraping capabilities
+​
+Productivity and communication
+
+Slack - Channel management and messaging capabilities
+Google Maps - Location services, directions, and place details
+Memory - Knowledge graph-based persistent memory system
+​
+AI and specialized tools
+
+EverArt - AI image generation using various models
+Sequential Thinking - Dynamic problem-solving through thought sequences
+AWS KB Retrieval - Retrieval from AWS Knowledge Base using Bedrock Agent Runtime
+​
+Official integrations
+
+These MCP servers are maintained by companies for their platforms:
+
+Axiom - Query and analyze logs, traces, and event data using natural language
+Browserbase - Automate browser interactions in the cloud
+Cloudflare - Deploy and manage resources on the Cloudflare developer platform
+E2B - Execute code in secure cloud sandboxes
+Neon - Interact with the Neon serverless Postgres platform
+Obsidian Markdown Notes - Read and search through Markdown notes in Obsidian vaults
+Qdrant - Implement semantic memory using the Qdrant vector search engine
+Raygun - Access crash reporting and monitoring data
+Search1API - Unified API for search, crawling, and sitemaps
+Stripe - Interact with the Stripe API
+Tinybird - Interface with the Tinybird serverless ClickHouse platform
+Weaviate - Enable Agentic RAG through your Weaviate collection(s)
+​
+Community highlights
+
+A growing ecosystem of community-developed servers extends MCP’s capabilities:
+
+Docker - Manage containers, images, volumes, and networks
+Kubernetes - Manage pods, deployments, and services
+Linear - Project management and issue tracking
+Snowflake - Interact with Snowflake databases
+Spotify - Control Spotify playback and manage playlists
+Todoist - Task management integration
+Note: Community servers are untested and should be used at your own risk. They are not affiliated with or endorsed by Anthropic.
+
+For a complete list of community servers, visit the MCP Servers Repository.
+
+​
+Getting started
+
+​
+Using reference servers
+
+TypeScript-based servers can be used directly with npx:
+
+
+Copy
+npx -y @modelcontextprotocol/server-memory
+Python-based servers can be used with uvx (recommended) or pip:
+
+
+Copy
+# Using uvx
+uvx mcp-server-git
+
+# Using pip
+pip install mcp-server-git
+python -m mcp_server_git
+​
+Configuring with Claude
+
+To use an MCP server with Claude, add it to your configuration:
+
+
+Copy
+{
+  "mcpServers": {
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"]
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/files"]
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "<YOUR_TOKEN>"
+      }
+    }
+  }
+}
+​
+Additional resources
+
+MCP Servers Repository - Complete collection of reference implementations and community servers
+Awesome MCP Servers - Curated list of MCP servers
+MCP CLI - Command-line inspector for testing MCP servers
+MCP Get - Tool for installing and managing MCP servers
+Supergateway - Run MCP stdio servers over SSE
+Zapier MCP - MCP Server with over 7,000+ apps and 30,000+ actions
+Visit our GitHub Discussions to engage with the MCP community.
+
+Get Started
+Example Clients
+A list of applications that support MCP integrations
+This page provides an overview of applications that support the Model Context Protocol (MCP). Each client may support different MCP features, allowing for varying levels of integration with MCP servers.
+
+​
+Feature support matrix
+
+Client	Resources	Prompts	Tools	Sampling	Roots	Notes
+Claude Desktop App	✅	✅	✅	❌	❌	Full support for all MCP features
+Claude Code	❌	✅	✅	❌	✅	Supports prompts, tools, and roots
+5ire	❌	❌	✅	❌	❌	Supports tools.
+BeeAI Framework	❌	❌	✅	❌	❌	Supports tools in agentic workflows.
+Cline	✅	❌	✅	❌	❌	Supports tools and resources.
+Continue	✅	✅	✅	❌	❌	Full support for all MCP features
+Copilot-MCP	✅	❌	✅	❌	❌	Supports tools and resources.
+Cursor	❌	❌	✅	❌	❌	Supports tools.
+Emacs Mcp	❌	❌	✅	❌	❌	Supports tools in Emacs.
+fast-agent	✅	✅	✅	✅	✅	Full multimodal MCP support, with end-to-end tests
+Genkit	⚠️	✅	✅	❌	❌	Supports resource list and lookup through tools.
+GenAIScript	❌	❌	✅	❌	❌	Supports tools.
+Goose	❌	❌	✅	❌	❌	Supports tools.
+LibreChat	❌	❌	✅	❌	❌	Supports tools for Agents
+mcp-agent	❌	❌	✅	⚠️	❌	Supports tools, server connection management, and agent workflows.
+Microsoft Copilot Studio	❌	❌	✅	❌	❌	Supports tools
+oterm	❌	✅	✅	❌	❌	Supports tools and prompts.
+Roo Code	✅	❌	✅	❌	❌	Supports tools and resources.
+Sourcegraph Cody	✅	❌	❌	❌	❌	Supports resources through OpenCTX
+Superinterface	❌	❌	✅	❌	❌	Supports tools
+TheiaAI/TheiaIDE	❌	❌	✅	❌	❌	Supports tools for Agents in Theia AI and the AI-powered Theia IDE
+VS Code GitHub Copilot	❌	❌	✅	❌	❌	Supports tools, roots, dynamic discovery, secure secret configuration, and one-click installation
+Windsurf Editor	❌	❌	✅	❌	❌	Supports tools with AI Flow for collaborative development.
+Witsy	❌	❌	✅	❌	❌	Supports tools in Witsy.
+Zed	❌	✅	❌	❌	❌	Prompts appear as slash commands
+SpinAI	❌	❌	✅	❌	❌	Supports tools for Typescript AI Agents
+OpenSumi	❌	❌	✅	❌	❌	Supports tools in OpenSumi
+Daydreams Agents	✅	✅	✅	❌	❌	Support for drop in Servers to Daydreams agents
+Apify MCP Tester	❌	❌	✅	❌	❌	Supports tools
+​
+Client details
+
+​
+Claude Desktop App
+
+The Claude desktop application provides comprehensive support for MCP, enabling deep integration with local tools and data sources.
+
+Key features:
+
+Full support for resources, allowing attachment of local files and data
+Support for prompt templates
+Tool integration for executing commands and scripts
+Local server connections for enhanced privacy and security
+ⓘ Note: The Claude.ai web application does not currently support MCP. MCP features are only available in the desktop application.
+
+​
+Claude Code
+
+Claude Code is an interactive agentic coding tool from Anthropic that helps you code faster through natural language commands. It supports MCP integration for prompts and tools, and also functions as an MCP server to integrate with other clients.
+
+Key features:
+
+Tool and prompt support for MCP servers
+Offers its own tools through an MCP server for integrating with other MCP clients
+​
+5ire
+
+5ire is an open source cross-platform desktop AI assistant that supports tools through MCP servers.
+
+Key features:
+
+Built-in MCP servers can be quickly enabled and disabled.
+Users can add more servers by modifying the configuration file.
+It is open-source and user-friendly, suitable for beginners.
+Future support for MCP will be continuously improved.
+​
+BeeAI Framework
+
+BeeAI Framework is an open-source framework for building, deploying, and serving powerful agentic workflows at scale. The framework includes the MCP Tool, a native feature that simplifies the integration of MCP servers into agentic workflows.
+
+Key features:
+
+Seamlessly incorporate MCP tools into agentic workflows.
+Quickly instantiate framework-native tools from connected MCP client(s).
+Planned future support for agentic MCP capabilities.
+Learn more:
+
+Example of using MCP tools in agentic workflow
+​
+Cline
+
+Cline is an autonomous coding agent in VS Code that edits files, runs commands, uses a browser, and more–with your permission at each step.
+
+Key features:
+
+Create and add tools through natural language (e.g. “add a tool that searches the web”)
+Share custom MCP servers Cline creates with others via the ~/Documents/Cline/MCP directory
+Displays configured MCP servers along with their tools, resources, and any error logs
+​
+Continue
+
+Continue is an open-source AI code assistant, with built-in support for all MCP features.
+
+Key features
+
+Type ”@” to mention MCP resources
+Prompt templates surface as slash commands
+Use both built-in and MCP tools directly in chat
+Supports VS Code and JetBrains IDEs, with any LLM
+​
+Cursor
+
+Cursor is an AI code editor.
+
+Key Features:
+
+Support for MCP tools in Cursor Composer
+Support for both STDIO and SSE
+​
+Emacs Mcp
+
+Emacs Mcp is an Emacs client designed to interface with MCP servers, enabling seamless connections and interactions. It provides MCP tool invocation support for AI plugins like gptel and llm, adhering to Emacs’ standard tool invocation format. This integration enhances the functionality of AI tools within the Emacs ecosystem.
+
+Key features:
+
+Provides MCP tool support for Emacs.
+​
+fast-agent
+
+fast-agent is a Python Agent framework, with simple declarative support for creating Agents and Workflows, with full multi-modal support for Anthropic and OpenAI models.
+
+Key features:
+
+PDF and Image support, based on MCP Native types
+Interactive front-end to develop and diagnose Agent applications, including passthrough and playback simulators
+Built in support for “Building Effective Agents” workflows.
+Deploy Agents as MCP Servers
+​
+Genkit
+
+Genkit is a cross-language SDK for building and integrating GenAI features into applications. The genkitx-mcp plugin enables consuming MCP servers as a client or creating MCP servers from Genkit tools and prompts.
+
+Key features:
+
+Client support for tools and prompts (resources partially supported)
+Rich discovery with support in Genkit’s Dev UI playground
+Seamless interoperability with Genkit’s existing tools and prompts
+Works across a wide variety of GenAI models from top providers
+​
+GenAIScript
+
+Programmatically assemble prompts for LLMs using GenAIScript (in JavaScript). Orchestrate LLMs, tools, and data in JavaScript.
+
+Key features:
+
+JavaScript toolbox to work with prompts
+Abstraction to make it easy and productive
+Seamless Visual Studio Code integration
+​
+Goose
+
+Goose is an open source AI agent that supercharges your software development by automating coding tasks.
+
+Key features:
+
+Expose MCP functionality to Goose through tools.
+MCPs can be installed directly via the extensions directory, CLI, or UI.
+Goose allows you to extend its functionality by building your own MCP servers.
+Includes built-in tools for development, web scraping, automation, memory, and integrations with JetBrains and Google Drive.
+​
+LibreChat
+
+LibreChat is an open-source, customizable AI chat UI that supports multiple AI providers, now including MCP integration.
+
+Key features:
+
+Extend current tool ecosystem, including Code Interpreter and Image generation tools, through MCP servers
+Add tools to customizable Agents, using a variety of LLMs from top providers
+Open-source and self-hostable, with secure multi-user support
+Future roadmap includes expanded MCP feature support
+​
+mcp-agent
+
+mcp-agent is a simple, composable framework to build agents using Model Context Protocol.
+
+Key features:
+
+Automatic connection management of MCP servers.
+Expose tools from multiple servers to an LLM.
+Implements every pattern defined in Building Effective Agents.
+Supports workflow pause/resume signals, such as waiting for human feedback.
+​
+Microsoft Copilot Studio
+
+Microsoft Copilot Studio is a robust SaaS platform designed for building custom AI-driven applications and intelligent agents, empowering developers to create, deploy, and manage sophisticated AI solutions.
+
+Key features:
+
+Support for MCP tools
+Extend Copilot Studio agents with MCP servers
+Leveraging Microsoft unified, governed, and secure API management solutions
+​
+oterm
+
+oterm is a terminal client for Ollama allowing users to create chats/agents.
+
+Key features:
+
+Support for multiple fully customizable chat sessions with Ollama connected with tools.
+Support for MCP tools.
+​
+Roo Code
+
+Roo Code enables AI coding assistance via MCP.
+
+Key features:
+
+Support for MCP tools and resources
+Integration with development workflows
+Extensible AI capabilities
+​
+Sourcegraph Cody
+
+Cody is Sourcegraph’s AI coding assistant, which implements MCP through OpenCTX.
+
+Key features:
+
+Support for MCP resources
+Integration with Sourcegraph’s code intelligence
+Uses OpenCTX as an abstraction layer
+Future support planned for additional MCP features
+​
+SpinAI
+
+SpinAI is an open-source TypeScript framework for building observable AI agents. The framework provides native MCP compatibility, allowing agents to seamlessly integrate with MCP servers and tools.
+
+Key features:
+
+Built-in MCP compatibility for AI agents
+Open-source TypeScript framework
+Observable agent architecture
+Native support for MCP tools integration
+​
+Superinterface
+
+Superinterface is AI infrastructure and a developer platform to build in-app AI assistants with support for MCP, interactive components, client-side function calling and more.
+
+Key features:
+
+Use tools from MCP servers in assistants embedded via React components or script tags
+SSE transport support
+Use any AI model from any AI provider (OpenAI, Anthropic, Ollama, others)
+​
+TheiaAI/TheiaIDE
+
+Theia AI is a framework for building AI-enhanced tools and IDEs. The AI-powered Theia IDE is an open and flexible development environment built on Theia AI.
+
+Key features:
+
+Tool Integration: Theia AI enables AI agents, including those in the Theia IDE, to utilize MCP servers for seamless tool interaction.
+Customizable Prompts: The Theia IDE allows users to define and adapt prompts, dynamically integrating MCP servers for tailored workflows.
+Custom agents: The Theia IDE supports creating custom agents that leverage MCP capabilities, enabling users to design dedicated workflows on the fly.
+Theia AI and Theia IDE’s MCP integration provide users with flexibility, making them powerful platforms for exploring and adapting MCP.
+
+Learn more:
+
+Theia IDE and Theia AI MCP Announcement
+Download the AI-powered Theia IDE
+​
+VS Code GitHub Copilot
+
+VS Code integrates MCP with GitHub Copilot through agent mode, allowing direct interaction with MCP-provided tools within your agentic coding workflow. Configure servers in Claude Desktop, workspace or user settings, with guided MCP installation and secure handling of keys in input variables to avoid leaking hard-coded keys.
+
+Key features:
+
+Support for stdio and server-sent events (SSE) transport
+Per-session selection of tools per agent session for optimal performance
+Easy server debugging with restart commands and output logging
+Tool calls with editable inputs and always-allow toggle
+Integration with existing VS Code extension system to register MCP servers from extensions
+​
+Windsurf Editor
+
+Windsurf Editor is an agentic IDE that combines AI assistance with developer workflows. It features an innovative AI Flow system that enables both collaborative and independent AI interactions while maintaining developer control.
+
+Key features:
+
+Revolutionary AI Flow paradigm for human-AI collaboration
+Intelligent code generation and understanding
+Rich development tools with multi-model support
+​
+Witsy
+
+Witsy is an AI desktop assistant, supoorting Anthropic models and MCP servers as LLM tools.
+
+Key features:
+
+Multiple MCP servers support
+Tool integration for executing commands and scripts
+Local server connections for enhanced privacy and security
+Easy-install from Smithery.ai
+Open-source, available for macOS, Windows and Linux
+​
+Zed
+
+Zed is a high-performance code editor with built-in MCP support, focusing on prompt templates and tool integration.
+
+Key features:
+
+Prompt templates surface as slash commands in the editor
+Tool integration for enhanced coding workflows
+Tight integration with editor features and workspace context
+Does not support MCP resources
+​
+OpenSumi
+
+OpenSumi is a framework helps you quickly build AI Native IDE products.
+
+Key features:
+
+Supports MCP tools in OpenSumi
+Supports built-in IDE MCP servers and custom MCP servers
+​
+Daydreams
+
+Daydreams is a generative agent framework for executing anything onchain
+
+Key features:
+
+Supports MCP Servers in config
+Exposes MCP Client
+​
+Apify MCP Tester
+
+Apify MCP Tester is an open-source client that connects to any MCP server using Server-Sent Events (SSE). It is a standalone Apify Actor designed for testing MCP servers over SSE, with support for Authorization headers. It uses plain JavaScript (old-school style) and is hosted on Apify, allowing you to run it without any setup.
+
+Key features:
+
+Connects to any MCP server via SSE.
+Works with the Apify MCP Server to interact with one or more Apify Actors.
+Dynamically utilizes tools based on context and user queries (if supported by the server).
+​
+Adding MCP support to your application
+
+If you’ve added MCP support to your application, we encourage you to submit a pull request to add it to this list. MCP integration can provide your users with powerful contextual AI capabilities and make your application part of the growing MCP ecosystem.
+
+Benefits of adding MCP support:
+
+Enable users to bring their own context and tools
+Join a growing ecosystem of interoperable AI applications
+Provide users with flexible integration options
+Support local-first AI workflows
+To get started with implementing MCP in your application, check out our Python or TypeScript SDK Documentation
+
+​
+Updates and corrections
+
+This list is maintained by the community. If you notice any inaccuracies or would like to update information about MCP support in your application, please submit a pull request or open an issue in our documentation repository.
+
+
+Tutorials
+Building MCP with LLMs
+Speed up your MCP development using LLMs such as Claude!
+This guide will help you use LLMs to help you build custom Model Context Protocol (MCP) servers and clients. We’ll be focusing on Claude for this tutorial, but you can do this with any frontier LLM.
+
+​
+Preparing the documentation
+
+Before starting, gather the necessary documentation to help Claude understand MCP:
+
+Visit https://modelcontextprotocol.io/llms-full.txt and copy the full documentation text
+Navigate to either the MCP TypeScript SDK or Python SDK repository
+Copy the README files and other relevant documentation
+Paste these documents into your conversation with Claude
+​
+Describing your server
+
+Once you’ve provided the documentation, clearly describe to Claude what kind of server you want to build. Be specific about:
+
+What resources your server will expose
+What tools it will provide
+Any prompts it should offer
+What external systems it needs to interact with
+For example:
+
+
+Copy
+Build an MCP server that:
+- Connects to my company's PostgreSQL database
+- Exposes table schemas as resources
+- Provides tools for running read-only SQL queries
+- Includes prompts for common data analysis tasks
+​
+Working with Claude
+
+When working with Claude on MCP servers:
+
+Start with the core functionality first, then iterate to add more features
+Ask Claude to explain any parts of the code you don’t understand
+Request modifications or improvements as needed
+Have Claude help you test the server and handle edge cases
+Claude can help implement all the key MCP features:
+
+Resource management and exposure
+Tool definitions and implementations
+Prompt templates and handlers
+Error handling and logging
+Connection and transport setup
+​
+Best practices
+
+When building MCP servers with Claude:
+
+Break down complex servers into smaller pieces
+Test each component thoroughly before moving on
+Keep security in mind - validate inputs and limit access appropriately
+Document your code well for future maintenance
+Follow MCP protocol specifications carefully
+​
+Next steps
+
+After Claude helps you build your server:
+
+Review the generated code carefully
+Test the server with the MCP Inspector tool
+Connect it to Claude.app or other MCP clients
+Iterate based on real usage and feedback
+Remember that Claude can help you modify and improve your server as requirements change over time.
+
+Need more guidance? Just ask Claude specific questions about implementing MCP features or troubleshooting issues that arise.
+
