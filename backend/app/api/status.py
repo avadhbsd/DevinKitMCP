@@ -36,7 +36,14 @@ async def kit_status(request: Request):
         }
     except Exception as e:
         logger.error(f"Error connecting to Kit.com API: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to connect to Kit.com API: {str(e)}")
+        error_message = str(e)
+        
+        if "401 Unauthorized" in error_message:
+            raise HTTPException(status_code=401, detail="Invalid Kit.com API key")
+        elif "404 Not Found" in error_message:
+            raise HTTPException(status_code=404, detail="Kit.com API endpoint not found")
+        else:
+            raise HTTPException(status_code=500, detail=f"Failed to connect to Kit.com API: {error_message}")
 
 @router.get("/claude")
 async def claude_status(request: Request):

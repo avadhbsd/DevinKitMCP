@@ -86,7 +86,7 @@ class KitMCPServer:
             "create_tag": self.kit_client.create_tag,
             "tag_subscriber": self._tag_subscriber,
             "get_subscribers": self.kit_client.get_subscribers,
-            "count_subscribers": self.kit_client.count_subscribers,
+            "count_subscribers": self._count_subscribers,
             "get_subscriber_details": self.kit_client.get_subscriber_by_email,
             "get_forms": self.kit_client.get_forms,
             "create_form": self.kit_client.create_form,
@@ -142,6 +142,21 @@ class KitMCPServer:
             raise HTTPException(status_code=404, detail=f"Tag '{tag_name}' not found and could not be created")
 
         return await self.kit_client.tag_subscriber_by_email(email, tag_id)
+
+    async def _count_subscribers(self) -> int:
+        """
+        Count the number of subscribers.
+
+        Returns:
+            Number of subscribers
+        """
+        try:
+            count = await self.kit_client.count_subscribers()
+            logger.info(f"Subscriber count: {count}")
+            return count
+        except Exception as e:
+            logger.error(f"Error counting subscribers: {str(e)}")
+            raise
 
     async def _explain_concept(self, concept: str) -> str:
         """

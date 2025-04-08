@@ -165,7 +165,46 @@ class KitClient:
 
         try:
             response = await self._make_request("GET", "/subscribers", params=params)
-            return response.get("total_count", 0)
+            logger.info(f"Subscriber count raw response: {response}")
+            
+            if "total_count" in response:
+                return response.get("total_count", 0)
+            
+            if "meta" in response and "total_count" in response["meta"]:
+                return response["meta"]["total_count"]
+            
+            if "total_subscribers" in response:
+                return response["total_subscribers"]
+            
+            if "count" in response:
+                return response["count"]
+            
+            if "subscribers" in response and isinstance(response["subscribers"], list):
+                if len(response["subscribers"]) > 0:
+                    if "pagination" in response and "total" in response["pagination"]:
+                        return response["pagination"]["total"]
+                    else:
+                        large_params = {
+                            "per_page": 100,
+                            "include_total_count": "true"
+                        }
+                        large_response = await self._make_request("GET", "/subscribers", params=large_params)
+                        logger.info(f"Large subscriber count response: {large_response}")
+                        
+                        if "total_count" in large_response:
+                            return large_response["total_count"]
+                        elif "meta" in large_response and "total_count" in large_response["meta"]:
+                            return large_response["meta"]["total_count"]
+                        elif "pagination" in large_response and "total" in large_response["pagination"]:
+                            return large_response["pagination"]["total"]
+                        else:
+                            return len(large_response.get("subscribers", []))
+                
+                return len(response["subscribers"])
+            
+            logger.warning(f"Could not determine subscriber count from response: {response}")
+            return 0
+            
         except Exception as e:
             logger.error(f"Error counting subscribers: {str(e)}")
             raise

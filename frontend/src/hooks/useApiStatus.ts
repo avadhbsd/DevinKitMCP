@@ -68,13 +68,23 @@ export const useApiStatus = ({
   }, [apiUrl, endpoint, apiKey, enabled]);
 
   useEffect(() => {
-    if (enabled) {
+    if (enabled && apiKey) {
       checkApiStatus();
     } else {
       setStatus('idle');
       setError(null);
     }
   }, [apiKey, enabled, checkApiStatus]);
+  
+  useEffect(() => {
+    if (!enabled || !apiKey) return;
+    
+    const intervalId = setInterval(() => {
+      checkApiStatus();
+    }, 30000); // Check every 30 seconds
+    
+    return () => clearInterval(intervalId);
+  }, [enabled, apiKey, checkApiStatus]);
 
   const retry = useCallback(() => {
     checkApiStatus();

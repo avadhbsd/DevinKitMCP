@@ -48,6 +48,26 @@ const ChatContainer: React.FC = () => {
       setIsSettingsOpen(true);
     }
   }, [apiSettings]);
+  
+  useEffect(() => {
+    if (apiSettings.kitApiKey && apiSettings.claudeApiKey) {
+      if (kitApiStatus.status === 'connected' && claudeApiStatus.status === 'connected') {
+        if (messages.length === 0) {
+          setMessages([{
+            content: "Connected successfully with API keys. You can now interact with Kit.com using natural language.",
+            role: 'assistant',
+            timestamp: new Date().toISOString()
+          }]);
+        }
+      } else if ((kitApiStatus.status === 'error' || claudeApiStatus.status === 'error') && messages.length === 0) {
+        setMessages([{
+          content: "There was an error connecting to the APIs. Please check your API keys in settings.",
+          role: 'assistant',
+          timestamp: new Date().toISOString()
+        }]);
+      }
+    }
+  }, [apiSettings, kitApiStatus.status, claudeApiStatus.status, messages.length]);
 
   useEffect(() => {
     const connectWebSocket = () => {
@@ -180,12 +200,24 @@ const ChatContainer: React.FC = () => {
         </div>
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
-            <div className={`w-2 h-2 rounded-full ${claudeApiStatus.status === 'connected' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-            <span className="text-sm">Claude API: {claudeApiStatus.status === 'connected' ? 'Connected' : 'Disconnected'}</span>
+            <div className={`w-2 h-2 rounded-full ${
+              claudeApiStatus.status === 'connected' ? 'bg-green-500' : 
+              claudeApiStatus.status === 'connecting' ? 'bg-yellow-500' : 'bg-red-500'
+            }`}></div>
+            <span className="text-sm">Claude API: {
+              claudeApiStatus.status === 'connected' ? 'Connected' : 
+              claudeApiStatus.status === 'connecting' ? 'Connecting...' : 'Disconnected'
+            }</span>
           </div>
           <div className="flex items-center space-x-2">
-            <div className={`w-2 h-2 rounded-full ${kitApiStatus.status === 'connected' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-            <span className="text-sm">Kit.com API: {kitApiStatus.status === 'connected' ? 'Connected' : 'Disconnected'}</span>
+            <div className={`w-2 h-2 rounded-full ${
+              kitApiStatus.status === 'connected' ? 'bg-green-500' : 
+              kitApiStatus.status === 'connecting' ? 'bg-yellow-500' : 'bg-red-500'
+            }`}></div>
+            <span className="text-sm">Kit.com API: {
+              kitApiStatus.status === 'connected' ? 'Connected' : 
+              kitApiStatus.status === 'connecting' ? 'Connecting...' : 'Disconnected'
+            }</span>
           </div>
           <button
             onClick={() => setIsSettingsOpen(true)}
